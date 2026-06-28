@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, it, expect } from 'vitest'
 import { loadConfig, parseConfigString, ConfigSchema } from '../../src/config/loader.js'
 
 describe('config loader', () => {
