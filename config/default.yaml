@@ -1,0 +1,142 @@
+server:
+  host: 0.0.0.0
+  port: 3000
+
+storage:
+  path: ./data/envctrl.db
+
+serial:
+  ports:
+    - id: bus_rs485_indoor
+      path: /dev/ttyRS485_indoor
+      baudRate: 9600
+    - id: bus_rs485_outdoor
+      path: /dev/ttyRS485_outdoor
+      baudRate: 9600
+    - id: bus_rs485_power
+      path: /dev/ttyRS485_power
+      baudRate: 19200
+    - id: bus_serial_aux
+      path: /dev/ttyAMA0
+      baudRate: 9600
+
+tcp:
+  clients: []
+
+devices:
+  - id: indoor_co2
+    name: 室内CO2传感器
+    kind: modbus-rtu
+    bus: bus_rs485_indoor
+    pollMs: 5000
+    driverOptions:
+      slaveId: 1
+      registerType: input
+      registerAddr: 0
+      registerQty: 2
+    points:
+      - id: co2_ppm
+        name: CO2
+        type: number
+        access: ro
+        unit: ppm
+        scale: { gain: 1, offset: 0 }
+        alarmHi: 1000
+
+  - id: outdoor_relay
+    name: 户外继电器
+    kind: modbus-rtu
+    bus: bus_rs485_outdoor
+    pollMs: 1000
+    driverOptions:
+      slaveId: 2
+      registerType: coil
+    points:
+      - id: ch1
+        name: 灯1
+        type: bool
+        access: rw
+      - id: ch2
+        name: 灯2
+        type: bool
+        access: rw
+
+  - id: modbus_tcp_meter
+    name: 电表
+    kind: modbus-tcp
+    bus: tcp:192.168.1.100:502
+    pollMs: 5000
+    driverOptions:
+      slaveId: 1
+      registerType: input
+      registerAddr: 0
+      registerQty: 4
+    points:
+      - id: voltage
+        name: 电压
+        type: number
+        access: ro
+        unit: V
+        scale: { gain: 0.1, offset: 0 }
+      - id: current
+        name: 电流
+        type: number
+        access: ro
+        unit: A
+        scale: { gain: 0.01, offset: 0 }
+
+  - id: led_status
+    name: 状态灯
+    kind: gpio-out
+    bus: gpio
+    driverOptions:
+      pin: 17
+    points:
+      - id: state
+        name: 状态灯
+        type: bool
+        access: rw
+
+  - id: door_sensor
+    name: 门磁
+    kind: gpio-in
+    bus: gpio
+    driverOptions:
+      pin: 27
+      edge: both
+      debounceMs: 50
+    points:
+      - id: open
+        name: 门开
+        type: bool
+        access: ro
+
+pi:
+  configTxt: /boot/firmware/config.txt
+  udevRulesDir: /etc/udev/rules.d
+  shimPath: /usr/local/libexec/envctrl-shim
+  services:
+    - envctrl
+    - pigpiod
+
+alarms:
+  - id: co2_high
+    source: indoor_co2.point.co2_ppm
+    condition: value > 1000
+    severity: warning
+    enabled: true
+    actions:
+      - type: device.write
+        target: outdoor_relay.point.ch1
+        value: true
+      - type: notify.sse
+
+  - id: cpu_temp_high
+    source: pi.sensor.cpu_temp_c
+    condition: value > 70
+    severity: warning
+    enabled: true
+    actions:
+      - type: notify.sse
+
+schedules: []
