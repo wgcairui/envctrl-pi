@@ -74,6 +74,36 @@ Edit `/boot/firmware/config.txt` (Bookworm path), reboot. `occupiedGpio()` + `co
 6. Add a JS wrapper in `src/pi/agent.ts` or a new route
 7. Test on the Pi, not just macOS
 
+## LLM Agent (L1/L2/L3)
+
+`src/pi/llmClient.ts` + `src/pi/tools.ts` + `src/pi/agents/{chat,diagnose,react}Agent.ts` give the Pi Agent three layers of LLM-mediated interaction. All three use the same tool registry and audit pipeline.
+
+**LLM provider:** Anthropic SDK with `ANTHROPIC_BASE_URL` env override, so **minimax works as a drop-in** by setting `ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic` and `ENVCTRL_LLM_MODEL=MiniMax-M2.7-highspeed`. Default model: `claude-haiku-4-5`. Audit: every request/response/tool-call is recorded in the `audit` table with `actor='llm'`.
+
+**Tool catalog (15 total, all routed through PiBroker → shim, no new root paths):**
+- 10 **read-only**: `pi_list_serial`, `pi_list_gpiochip`, `pi_read_config`, `pi_dmesg_tail`, `pi_journal_tail`, `pi_vcgencmd`, `pi_config_plan` (dry-run), `pi_read_recent_samples`, `pi_read_recent_alarms`, `device_read`
+- 1 **low-risk-write** (auto-execute): `device_control` (toggle a relay/GPIO output)
+- 4 **high-risk-write** (require user confirm): `pi_config_apply`, `pi_udev_install`, `pi_service_action` (start/stop/restart), `pi_reboot`
+
+**Safety invariants:**
+- No system call bypasses `PiBroker` → shim — the LLM has no way to exec arbitrary commands.
+- High-risk tools never auto-execute; the route layers them as `confirm_request` SSE events, the web renders an amber alert with Confirm/Deny buttons, and a separate `POST /api/pi/agent/confirm` runs the actual tool.
+- Confirmation timeout (default 60s) auto-aborts with a denial.
+- ReAct agents are bounded by `maxSteps` (default 10).
+- Every action is recorded in the `audit` table regardless of outcome.
+
+**ReAct ordering gotcha:** `this.pending.set(id, resolve)` must run **before** the `confirm_request` yield so a synchronous `resolveConfirmation()` call from the consumer finds the entry. Don't swap these.
+
+**Web UI:** new `pi-agent` tab (`web/src/pages/PiAgentPage.tsx`) with chat/diagnose mode toggle, real-time LLM status indicator (● ready / ○ not configured), collapsible tool-call details with risk badges, amber confirmation dialogs for high-risk actions, and a live audit log on the right (5s refresh).
+
+**Routes:**
+- `GET  /api/pi/agent/status` — LLM configured?
+- `POST /api/pi/agent/chat` — L1
+- `POST /api/pi/agent/diagnose` — L2
+- `POST /api/pi/agent/react` — L3 (SSE stream)
+- `POST /api/pi/agent/confirm` — execute high-risk tool
+- `GET  /api/pi/agent/audit` — last N llm-* audit entries
+
 ## Alarm conditions — NEVER eval
 
 `src/core/conditionParser.ts` is a hand-rolled token-whitelist parser. Allowed tokens: numbers, single/double-quoted strings, identifiers `value`/`true`/`false`, comparators `> < >= <= == === != !==`, `!`, `&&`, `||`, parentheses. Reject everything else at compile time. **Never use `eval`, `new Function`, or `vm`** even with a sandbox — alarm configs come from user-editable YAML.
@@ -161,6 +191,7 @@ If `bun run dev` says "command not found: bun", check `echo $PATH` — Bun must 
 |---|---|
 | Elysia app & route mount | `src/api/server.ts` |
 | Per-feature routes | `src/api/routes/*.ts` |
+| LLM agent routes (L1/L2/L3) | `src/api/routes/piAgent.ts` |
 | Driver factory | `src/drivers/driver.ts` |
 | New driver skeleton | `src/drivers/_template.ts` (when added) |
 | Bus abstraction | `src/iobus/types.ts` |
@@ -170,6 +201,12 @@ If `bun run dev` says "command not found: bun", check `echo $PATH` — Bun must 
 | Token parser | `src/core/conditionParser.ts` |
 | Pi config editor | `src/pi/configOps.ts` |
 | Pi Agent façade | `src/pi/agent.ts` |
+| LLM client (Anthropic SDK wrapper) | `src/pi/llmClient.ts` |
+| Tool registry (15 tools) | `src/pi/tools.ts` |
+| L1 chat agent | `src/pi/agents/chatAgent.ts` |
+| L2 diagnose agent | `src/pi/agents/diagnoseAgent.ts` |
+| L3 ReAct agent | `src/pi/agents/reactAgent.ts` |
+| Pi Agent Web UI | `web/src/pages/PiAgentPage.tsx` |
 | Privilege shim | `scripts/pi-shim/envctrl_shim.py` |
 | React entry | `web/src/main.tsx`, `web/src/App.tsx` |
 | Eden client | `web/src/api.ts` |

@@ -88,17 +88,49 @@ sudo journalctl -u envctrl -f
 
 ## Pi Agent capabilities (Web → /api/pi/*)
 
-- **GET /api/pi/info** — model, CPU temp, volts, uptime, load, memory, disk
-- **GET /api/pi/overlays** — current dtoverlay list with GPIO mapping
-- **GET /api/pi/devices** — `/dev/tty*`, `/dev/gpiochip*`
-- **GET /api/pi/logs** — journalctl tail for envctrl
-- **POST /api/pi/config** — plan / apply dtoverlay changes (dryRun by default; writes `/boot/firmware/config.txt` with timestamped backup; refuses unknown overlays; rejects GPIO conflicts)
-- **POST /api/pi/udev** — install / reload udev rules
+**System introspection:**
+- `GET /api/pi/info` — model, CPU temp, volts, uptime, load, memory, disk
+- `GET /api/pi/overlays` — current dtoverlay list with GPIO mapping
+- `GET /api/pi/devices` — `/dev/tty*`, `/dev/gpiochip*`
+- `GET /api/pi/logs` — journalctl tail for envctrl
+
+**Configuration:**
+- `POST /api/pi/config` — plan / apply dtoverlay changes (dryRun by default; writes `/boot/firmware/config.txt` with timestamped backup; refuses unknown overlays; rejects GPIO conflicts)
+- `POST /api/pi/udev` — install / reload udev rules
+
+**LLM integration (`/api/pi/agent/*`):**
+- `GET /api/pi/agent/status` — LLM configured?
+- `POST /api/pi/agent/chat` — L1 single-shot natural-language → tool call → reply
+- `POST /api/pi/agent/diagnose` — L2 read-only multi-turn investigation
+- `POST /api/pi/agent/react` — L3 autonomous loop (SSE stream)
+- `POST /api/pi/agent/confirm` — execute a high-risk tool the LLM requested
+- `GET /api/pi/agent/audit` — recent `llm-*` audit entries
 
 All root operations go through `/usr/local/libexec/envctrl-shim` which:
 - Refuses to execute unless invoked via sudo (EUID 0)
 - Has a strict whitelist of 11 subcommands
 - Does not parse `argv` shell-style — uses JSON-RPC over stdio
+
+## LLM agent (optional)
+
+The Pi Agent supports an optional LLM layer (L1 chat / L2 diagnose / L3 ReAct) using `@anthropic-ai/sdk`. minimax works as a drop-in via `ANTHROPIC_BASE_URL`. To enable:
+
+```bash
+# Option A: Anthropic direct
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Option B: minimax
+export ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
+export ANTHROPIC_API_KEY=${YOUR_MINIMAX_KEY}
+export ENVCTRL_LLM_MODEL=MiniMax-M2.7-highspeed
+
+# Restart envctrl
+sudo systemctl restart envctrl
+```
+
+Open the **pi-agent** tab in the web UI. The status indicator (● / ○) shows whether the LLM is configured. All LLM-initiated actions are recorded in the `audit` table with `actor='llm'`.
+
+**Safety**: high-risk actions (config apply, udev install, systemctl restart, reboot) require explicit user confirmation via an amber dialog in the web UI. Low-risk actions (toggling a relay/GPIO) auto-execute.
 
 ## Security notes
 
