@@ -110,12 +110,16 @@ If a new route isn't appearing in the web, you almost certainly forgot to `.use(
 
 ## Native module rebuild reality
 
-`better-sqlite3` and `epoll` (onoff's dep) are N-API native addons. They are compiled against the Node version that was active when `npm install` (or `bun install`) was last run. If you switch Node major versions (24 → 26), you'll get `NODE_MODULE_VERSION mismatch`. The project has TWO guards:
+`better-sqlite3` and `epoll` (onoff's dep) are N-API native addons. They are compiled against the Node version that was active when `npm install` (or `bun install`) was last run. If you switch Node major versions (22 → 24 → 26), you'll get `NODE_MODULE_VERSION mismatch`. The project has TWO guards:
 
 1. **`scripts/check-native-abi.mjs`** runs as `postinstall` after `bun install` / `npm install`. It tries to require native modules and prints the fix if it can't.
 2. **`scripts/predev-check.mjs`** runs at the start of `bun run dev`. If a mismatch is detected it exits with code 1 BEFORE tsx watch boots, so you see a clear error instead of a stack trace 5 seconds later.
 
-**Critical gotcha:** if the user has multiple Node installations (e.g. nvm + homebrew), the `postinstall` ABI check runs under whatever Node invoked the install, but `bun run dev` may run under a different one (PATH ordering). Always do:
+**Strong recommendation: keep only ONE Node installation.** Mixing nvm + homebrew is the most common source of these errors. The author of this project removed nvm and now uses only the homebrew Node (`brew install node`).
+
+**WARNING: `brew uninstall nvm` will cascade-uninstall homebrew Node** because nvm's shell script depends on it. If you have both, uninstall nvm FIRST, then `brew install node` to put it back. (Verified in commit history.)
+
+**Critical gotcha:** if the user has multiple Node installations, the `postinstall` ABI check runs under whatever Node invoked the install, but `bun run dev` may run under a different one (PATH ordering). Always do:
 
 ```bash
 # Use the SAME node for rebuild that you use for dev
@@ -126,7 +130,7 @@ bun run dev
 
 If `bun run dev` says "command not found: bun", check `echo $PATH` — Bun must be on PATH before the shell can find it. Recommend adding `export PATH="$HOME/.bun/bin:$PATH"` to `~/.zshrc`.
 
-**DO NOT pin `engines.node` to a single version** — the project supports Node 22 ≤ n < 27. The `engines` field in `package.json` enforces this and yarn/bun will warn if violated.
+**`engines.node` is `>=22 <27`** to support Node 22 LTS, 24 LTS, and 26 (current Active). Do not pin to a single version.
 
 ## Common traps (real bugs from envctrl)
 
