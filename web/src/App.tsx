@@ -5,8 +5,9 @@ import { PiPage } from './pages/PiPage'
 import { PiAgentPage } from './pages/PiAgentPage'
 import { ConfigPage } from './pages/ConfigPage'
 import { DeviceDetailPage } from './pages/DeviceDetailPage'
+import { AdminPage } from './pages/AdminPage'
 
-type Tab = 'overview' | 'device' | 'alarms' | 'pi' | 'pi-agent' | 'config'
+type Tab = 'overview' | 'device' | 'alarms' | 'pi' | 'pi-agent' | 'config' | 'admin'
 
 export function App() {
   const [tab, setTab] = useState<Tab>('overview')
@@ -17,7 +18,7 @@ export function App() {
       <header className="bg-slate-800 border-b border-slate-700 px-4 py-3 flex items-center gap-4">
         <h1 className="text-xl font-bold text-emerald-400">envctrl</h1>
         <nav className="flex gap-1">
-          {(['overview', 'alarms', 'pi', 'pi-agent', 'config'] as Tab[]).map((t) => (
+          {(['overview', 'alarms', 'pi', 'pi-agent', 'config', 'admin'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -41,6 +42,7 @@ export function App() {
         {tab === 'pi' && <PiPage />}
         {tab === 'pi-agent' && <PiAgentPage />}
         {tab === 'config' && <ConfigPage />}
+        {tab === 'admin' && <AdminPage />}
       </main>
     </div>
   )
