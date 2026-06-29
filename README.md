@@ -52,6 +52,17 @@ node dist/index.js  # serves API + static web on :3000
 
 The test runner is **vitest** (not bun's built-in test runner) because Bun's runtime cannot yet load better-sqlite3 (oven-sh/bun#4290).
 
+## Native module ABI trap
+
+`better-sqlite3` and `epoll` (onoff's dep) are N-API native addons. They are **compiled against the Node version that ran `bun install`**. If you switch Node major versions (24 → 26), you get `NODE_MODULE_VERSION mismatch` errors. The project has `scripts/check-native-abi.mjs` running as `postinstall` to detect this and print the fix:
+
+```bash
+npm rebuild better-sqlite3
+npm rebuild epoll      # only if onoff stopped working
+```
+
+DO NOT pin `engines.node` to a single version — the project supports Node 24+.
+
 ## Deploy to Raspberry Pi 4
 
 ```bash

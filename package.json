@@ -13,6 +13,7 @@
     "build:server": "tsc -p tsconfig.json",
     "build:web": "cd web && bunx vite build",
     "dev:web": "cd web && bunx vite",
+    "postinstall": "node scripts/check-native-abi.mjs",
     "dev:server": "tsx watch src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
