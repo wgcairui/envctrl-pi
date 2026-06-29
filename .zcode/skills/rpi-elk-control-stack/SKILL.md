@@ -110,14 +110,23 @@ If a new route isn't appearing in the web, you almost certainly forgot to `.use(
 
 ## Native module rebuild reality
 
-`better-sqlite3` and `epoll` (onoff's dep) are N-API native addons. They are compiled against the Node version that was active when `npm install` (or `bun install`) was last run. If you switch Node major versions (24 → 26), you'll get `NODE_MODULE_VERSION mismatch`. The project has `scripts/check-native-abi.mjs` running as `postinstall` to detect this:
+`better-sqlite3` and `epoll` (onoff's dep) are N-API native addons. They are compiled against the Node version that was active when `npm install` (or `bun install`) was last run. If you switch Node major versions (24 → 26), you'll get `NODE_MODULE_VERSION mismatch`. The project has TWO guards:
 
-```
-$ npm rebuild better-sqlite3
-$ npm rebuild epoll      # only if onoff stopped working on Pi
+1. **`scripts/check-native-abi.mjs`** runs as `postinstall` after `bun install` / `npm install`. It tries to require native modules and prints the fix if it can't.
+2. **`scripts/predev-check.mjs`** runs at the start of `bun run dev`. If a mismatch is detected it exits with code 1 BEFORE tsx watch boots, so you see a clear error instead of a stack trace 5 seconds later.
+
+**Critical gotcha:** if the user has multiple Node installations (e.g. nvm + homebrew), the `postinstall` ABI check runs under whatever Node invoked the install, but `bun run dev` may run under a different one (PATH ordering). Always do:
+
+```bash
+# Use the SAME node for rebuild that you use for dev
+node -v
+npm rebuild better-sqlite3
+bun run dev
 ```
 
-DO NOT pin `engines.node` to a single version — the project supports Node 24+.
+If `bun run dev` says "command not found: bun", check `echo $PATH` — Bun must be on PATH before the shell can find it. Recommend adding `export PATH="$HOME/.bun/bin:$PATH"` to `~/.zshrc`.
+
+**DO NOT pin `engines.node` to a single version** — the project supports Node 22 ≤ n < 27. The `engines` field in `package.json` enforces this and yarn/bun will warn if violated.
 
 ## Common traps (real bugs from envctrl)
 
@@ -134,6 +143,9 @@ DO NOT pin `engines.node` to a single version — the project supports Node 24+.
 | GPIO read returns false on macOS | `onoff` stub mode | Expected; test GPIO on Pi only |
 | `lock:true` serial port blocks other processes | By design | Document the lock; tests use `socat` pty pairs |
 | `findSchema()` not in dist | tsc doesn't copy non-TS files | Multi-candidate lookup OR copy in postbuild step |
+| NODE_MODULE_VERSION mismatch after Node switch | native modules compiled against old Node | `npm rebuild better-sqlite3` (use the same `node` you'll use for dev) |
+| `bun run dev` says "command not found: bun" | Bun not on PATH | `export PATH="$HOME/.bun/bin:$PATH"` |
+| Rebuild "succeeds" but app still crashes | rebuilt with a different Node than you run with | check `node -v` matches the rebuild Node; multiple Node installs (nvm + homebrew) is the usual cause |
 | NODE_MODULE_VERSION mismatch | Different Node than what built the binaries | `npm rebuild better-sqlite3` |
 | SSE not receiving | Elysia version of EventSource | Use `new EventSource(url)` in web |
 | `vite build` bundles 200kb+ | Eden Treaty + React full | Acceptable; check gzipped size |
