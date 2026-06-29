@@ -1,0 +1,27 @@
+[Unit]
+Description=envctrl - Raspberry Pi environment control
+After=network-online.target pigpiod.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=envctrl
+Group=dialout,gpio
+WorkingDirectory=/opt/envctrl
+ExecStartPre=/bin/bash -c 'test -f /usr/local/libexec/envctrl-shim || echo "WARNING: envctrl-shim not installed, /api/pi/* endpoints will fail" >&2'
+ExecStart=/usr/bin/node --enable-source-maps /opt/envctrl/dist/index.js
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=-/etc/envctrl/env
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=envctrl
+
+# Hardening (optional)
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
