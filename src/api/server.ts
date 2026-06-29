@@ -17,6 +17,8 @@ import { controlRoutes } from './routes/control.js'
 import { piRoutes } from './routes/pi.js'
 import { streamRoutes } from './routes/stream.js'
 import { piAgentLLMRoutes } from './routes/piAgent.js'
+import { llmProviderRoutes } from './routes/llmProviders.js'
+import { LLMProviderRepo } from '../storage/llmProviderRepo.js'
 import type { AuditRepo } from '../storage/repositories.js'
 
 export interface Deps {
@@ -26,6 +28,7 @@ export interface Deps {
   alarms: AlarmRepo
   audit: AuditRepo
   pi: PiAgent
+  llmProviders: LLMProviderRepo
 }
 
 /**
@@ -129,6 +132,7 @@ export function buildApp(deps: Deps) {
     .use(controlRoutes(() => deps.registry))
     .use(piRoutes(() => deps.pi))
     .use(streamRoutes())
+    .use(llmProviderRoutes(() => deps.llmProviders, () => deps.audit))
     .use(
       piAgentLLMRoutes(() => ({
         cfg: deps.cfg,
@@ -137,6 +141,7 @@ export function buildApp(deps: Deps) {
         alarms: deps.alarms,
         audit: deps.audit,
         agent: deps.pi,
+        llmProviders: deps.llmProviders,
       }))
     )
 

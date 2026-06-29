@@ -59,3 +59,19 @@ CREATE TABLE IF NOT EXISTS audit (
   detail_json  TEXT,
   ts           INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS llm_provider (
+  id           TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  base_url     TEXT NOT NULL,
+  api_key      TEXT NOT NULL,
+  model        TEXT NOT NULL,
+  is_preset    INTEGER NOT NULL DEFAULT 0,
+  is_active    INTEGER NOT NULL DEFAULT 0,
+  notes        TEXT,
+  created_at   INTEGER NOT NULL,
+  updated_at   INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_llm_active
+  ON llm_provider (is_active) WHERE is_active = 1;

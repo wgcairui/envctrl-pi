@@ -38,23 +38,60 @@ export interface LLMClientOpts {
   actor?: string
 }
 
+export interface LLMClientOpts {
+  model?: string
+  baseUrl?: string
+  apiKey?: string
+  audit?: AuditRepo
+  /** Default 'anonymous' for the audit actor. */
+  actor?: string
+}
+
+/**
+ * Resolve the LLM client config from explicit options, then env vars,
+ * then a callback (used for runtime provider switching). Throws
+ * LLMNotConfiguredError if no API key can be found.
+ */
+function resolveConfig(opts: LLMClientOpts): { apiKey: string; baseUrl: string; model: string } {
+  const apiKey = opts.apiKey
+    ?? process.env.ENVCTRL_ANTHROPIC_API_KEY
+    ?? process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new LLMNotConfiguredError()
+  return {
+    apiKey,
+    baseUrl: opts.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com',
+    model: opts.model ?? process.env.ENVCTRL_LLM_MODEL ?? 'claude-haiku-4-5',
+  }
+}
+
 export class LLMClient {
-  private client: Anthropic
-  readonly model: string
-  readonly baseUrl: string
+  private opts: LLMClientOpts
+  private client: Anthropic | null = null
+  private _model: string
+  private _baseUrl: string
   private audit?: AuditRepo
   private actor: string
 
   constructor(opts: LLMClientOpts = {}) {
-    const apiKey = opts.apiKey
-      ?? process.env.ENVCTRL_ANTHROPIC_API_KEY
-      ?? process.env.ANTHROPIC_API_KEY
-    if (!apiKey) throw new LLMNotConfiguredError()
-    this.baseUrl = opts.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com'
-    this.model = opts.model ?? process.env.ENVCTRL_LLM_MODEL ?? 'claude-haiku-4-5'
+    this.opts = opts
+    const cfg = resolveConfig(opts)
+    this._baseUrl = cfg.baseUrl
+    this._model = cfg.model
     this.audit = opts.audit
     this.actor = opts.actor ?? 'llm'
-    this.client = new Anthropic({ apiKey, baseURL: this.baseUrl })
+    this.client = new Anthropic({ apiKey: cfg.apiKey, baseURL: cfg.baseUrl })
+  }
+
+  /** Build a new client from a stored LLMProvider row (overrides env). */
+  static fromProvider(p: { baseUrl: string; apiKey: string; model: string }, audit?: AuditRepo): LLMClient {
+    return new LLMClient({ baseUrl: p.baseUrl, apiKey: p.apiKey, model: p.model, audit })
+  }
+
+  get model(): string {
+    return this._model
+  }
+  get baseUrl(): string {
+    return this._baseUrl
   }
 
   /**
@@ -69,14 +106,15 @@ export class LLMClient {
     maxTokens?: number
     temperature?: number
   }): Promise<Message> {
+    if (!this.client) throw new LLMNotConfiguredError()
     const reqHash = createHash('sha256')
-      .update(JSON.stringify({ m: this.model, s: params.system, msgs: params.messages }))
+      .update(JSON.stringify({ m: this._model, s: params.system, msgs: params.messages }))
       .digest('hex')
       .slice(0, 16)
-    this.audit?.log(this.actor, 'llm.request', { model: this.model, hash: reqHash, baseUrl: this.baseUrl })
+    this.audit?.log(this.actor, 'llm.request', { model: this._model, hash: reqHash, baseUrl: this._baseUrl })
 
     const res = await this.client.messages.create({
-      model: this.model,
+      model: this._model,
       max_tokens: params.maxTokens ?? 2048,
       temperature: params.temperature ?? 0.2,
       system: params.system,

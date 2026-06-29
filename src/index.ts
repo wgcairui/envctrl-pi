@@ -1,6 +1,7 @@
 import { loadConfig } from './config/loader.js'
 import { openDb } from './storage/db.js'
 import { SampleRepo, AlarmRepo, AuditRepo } from './storage/repositories.js'
+import { LLMProviderRepo } from './storage/llmProviderRepo.js'
 import { DeviceRegistry } from './core/deviceRegistry.js'
 import { DataEngine } from './core/dataEngine.js'
 import { AlarmEngine } from './core/alarmEngine.js'
@@ -15,6 +16,8 @@ async function main() {
   const samples = new SampleRepo(db)
   const alarmRepo = new AlarmRepo(db)
   const audit = new AuditRepo(db)
+  const llmProviders = new LLMProviderRepo(db)
+  llmProviders.seedPresetsIfEmpty()
 
   const registry = new DeviceRegistry(cfg)
   await registry.init()
@@ -30,7 +33,7 @@ async function main() {
 
   audit.log('system', 'startup', { deviceCount: cfg.devices.length })
 
-  const app = buildApp({ cfg, registry, samples, alarms: alarmRepo, audit, pi: piAgent })
+  const app = buildApp({ cfg, registry, samples, alarms: alarmRepo, audit, pi: piAgent, llmProviders })
   app.listen({ port: cfg.server.port })
 
   console.log(`envctrl listening on http://0.0.0.0:${cfg.server.port}`)

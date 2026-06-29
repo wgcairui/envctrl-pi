@@ -10,6 +10,8 @@ import { DiagnoseAgent } from '../../pi/agents/diagnoseAgent.js'
 import { ReActAgent, type AgentStep } from '../../pi/agents/reactAgent.js'
 import { LLMClient, LLMNotConfiguredError } from '../../pi/llmClient.js'
 import { buildDefaultToolRegistry, type ToolContext } from '../../pi/tools.js'
+import { LLMProviderRepo } from '../../storage/llmProviderRepo.js'
+import { isLLMConfigured } from './llmProviders.js'
 import type { AppConfig } from '../../config/loader.js'
 import type { DeviceRegistry } from '../../core/deviceRegistry.js'
 import type { SampleRepo, AlarmRepo, AuditRepo } from '../../storage/repositories.js'
@@ -22,6 +24,7 @@ export interface PiAgentLLMDeps {
   alarms: AlarmRepo
   audit: AuditRepo
   agent: PiAgent
+  llmProviders: LLMProviderRepo
 }
 
 interface PendingConfirmation {
@@ -55,19 +58,28 @@ export function piAgentLLMRoutes(deps: () => PiAgentLLMDeps) {
 
   function buildLLMClient(): LLMClient {
     const d = deps()
+    // Prefer the active stored provider (hot-reloadable via /api/llm/providers/:id/activate);
+    // fall back to env-var-based client if no row is configured.
+    const active = d.llmProviders.getActive()
+    if (active && active.apiKey) {
+      return LLMClient.fromProvider(active, d.audit)
+    }
     return new LLMClient({ audit: d.audit })
   }
 
   app.get('/status', () => {
-    try {
-      buildLLMClient()
-      return { configured: true, model: process.env.ENVCTRL_LLM_MODEL ?? 'claude-haiku-4-5' }
-    } catch (e) {
-      if (e instanceof LLMNotConfiguredError) {
-        return { configured: false, reason: 'API key not set' }
+    const repo = deps().llmProviders
+    const active = repo.getActive()
+    if (isLLMConfigured(repo)) {
+      return {
+        configured: true,
+        model: active?.model ?? process.env.ENVCTRL_LLM_MODEL ?? 'claude-haiku-4-5',
+        providerName: active?.name,
+        baseUrl: active?.baseUrl ?? process.env.ANTHROPIC_BASE_URL,
+        source: active ? 'provider' : 'env',
       }
-      throw e
     }
+    return { configured: false, reason: 'API key not set' }
   })
 
   app.post(
