@@ -152,7 +152,55 @@ Accepted formats: 64 hex chars, 32 raw bytes, or any string (hashed via SHA-256 
 
 **Dev fallback**: if `ENVCTRL_ENCRYPTION_KEY` is unset, envctrl derives a deterministic key from the hostname and emits a one-time console warning. **Do not use in production.** Existing plaintext keys (from older versions) are automatically re-encrypted on the next save.
 
-**Key rotation**: changing the key invalidates all existing encrypted keys. To migrate, either re-enter keys in the ConfigPage after the rotation, or run a small migration script (not provided — open an issue if needed).
+### Rotating the encryption key
+
+The web **Admin** page (`/admin` tab) generates the exact SSH command you need. Pasting a new key there will produce something like:
+
+```bash
+sudo -E /usr/local/bin/envctrl-rotate-encryption-key
+# Equivalent to running:
+ENVCTRL_OLD_KEY='<old>' \
+ENVCTRL_NEW_KEY='<new>' \
+/opt/envctrl/node_modules/.bin/tsx /opt/envctrl/scripts/rotateKey.ts
+```
+
+The script re-encrypts every `llm_provider.api_key` row in a single transaction — any decrypt/encrypt failure rolls back the database. After it succeeds, update `/etc/envctrl/env` so `ENVCTRL_ENCRYPTION_KEY=<new>` and `sudo systemctl restart envctrl`.
+
+The web server never executes rotation itself: re-encrypting requires writing to `/etc/envctrl/env`, which only root can do, and we don't want a web exploit to be able to rotate keys. The Admin page is a *command generator* — copy/paste over SSH.
+
+You can also run the script directly:
+
+```bash
+# Manually, with prompts:
+sudo -E /usr/local/bin/envctrl-rotate-encryption-key
+
+# Or non-interactively (CI / scripted rotations):
+ENVCTRL_OLD_KEY="$(grep ^ENVCTRL_ENCRYPTION_KEY= /etc/envctrl/env | cut -d= -f2)" \
+ENVCTRL_NEW_KEY="$(openssl rand -hex 32)" \
+sudo -E /usr/local/bin/envctrl-rotate-encryption-key
+```
+
+After rotation, the audit table has `key.rotation.start` / `.completed` / `.failed` rows you can query for compliance.
+
+## Backups
+
+Daily hot-backups of the SQLite database + config run via systemd timer (`envctrl-backup.timer`, 03:00 by default). Files land in `/var/backups/envctrl/` with 7-day retention. `install.sh` enables the timer automatically.
+
+Manual operations:
+
+```bash
+# Create one now
+sudo -u envctrl /usr/local/bin/envctrl-backup
+# or via the web Admin → Backups → "Create now" button
+
+# Restore (stops the service, replaces data, restarts)
+sudo /usr/local/bin/envctrl-restore /var/backups/envctrl/envctrl-20260101T030000Z.db
+# optional second arg: a config backup
+```
+
+The web **Admin → Backups** card lists, downloads, and generates the restore command — same one-way SSH pattern as rotation, so the web process never modifies the live database directly.
+
+## Security notes
 
 ## Security notes
 
