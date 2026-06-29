@@ -2,6 +2,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { api } from '../api'
 import { useStream } from '../hooks/useStream'
+import { Sparkline } from '../components/Sparkline'
 
 export function DeviceDetailPage({ deviceId, onBack }: { deviceId: string; onBack: () => void }) {
   const q = useQuery({
@@ -84,35 +85,9 @@ export function DeviceDetailPage({ deviceId, onBack }: { deviceId: string; onBac
       {history.data && history.data.length > 0 && (
         <div className="bg-slate-800 border border-slate-700 rounded p-4">
           <h3 className="text-lg font-semibold mb-2">History</h3>
-          <Sparkline data={history.data.map((s: any) => [s.ts, s.value as number])} />
+          <Sparkline data={history.data.map((s: any) => ({ ts: s.ts, value: s.value as number }))} />
         </div>
       )}
     </div>
-  )
-}
-
-function Sparkline({ data }: { data: [number, number][] }) {
-  if (data.length < 2) return <div className="text-slate-500 text-sm">not enough data</div>
-  const w = 600
-  const h = 80
-  const xs = data.map((d) => d[0])
-  const ys = data.map((d) => d[1])
-  const xmin = Math.min(...xs)
-  const xmax = Math.max(...xs)
-  const ymin = Math.min(...ys)
-  const ymax = Math.max(...ys)
-  const xrange = xmax - xmin || 1
-  const yrange = ymax - ymin || 1
-  const path = data
-    .map((d, i) => {
-      const x = ((d[0] - xmin) / xrange) * w
-      const y = h - ((d[1] - ymin) / yrange) * h
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
-    })
-    .join(' ')
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20">
-      <path d={path} fill="none" stroke="rgb(52 211 153)" strokeWidth="1.5" />
-    </svg>
   )
 }
