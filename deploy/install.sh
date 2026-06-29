@@ -28,4 +28,15 @@ systemctl daemon-reload
 systemctl enable envctrl
 systemctl restart envctrl
 
+# 5. Backup + rotation tooling
+echo "==> Installing backup + key-rotation scripts"
+install -d -m 0750 -o envctrl -g envctrl /var/backups/envctrl
+install -m 0750 /opt/envctrl/deploy/backup.sh            /usr/local/bin/envctrl-backup
+install -m 0750 /opt/envctrl/deploy/restore.sh           /usr/local/bin/envctrl-restore
+install -m 0750 /opt/envctrl/deploy/rotate-encryption-key.sh /usr/local/bin/envctrl-rotate-encryption-key
+install -m 0644 /opt/envctrl/deploy/envctrl-backup.service /etc/systemd/system/envctrl-backup.service
+install -m 0644 /opt/envctrl/deploy/envctrl-backup.timer   /etc/systemd/system/envctrl-backup.timer
+systemctl daemon-reload
+systemctl enable --now envctrl-backup.timer
+
 echo "==> Done. Tail logs with:  journalctl -u envctrl -f"

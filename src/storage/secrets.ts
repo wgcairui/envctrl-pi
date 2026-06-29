@@ -18,16 +18,21 @@ import { hostname } from 'node:os'
 
 const PREFIX = 'enc:v1:'
 
+/**
+ * Resolve a raw key string into a 32-byte Buffer. Same rules as
+ * `getEncryptionKey()` (hex / raw-32 / sha256). Exported so the
+ * rotation CLI can re-encrypt with explicit OLD and NEW keys.
+ */
+export function resolveKey(raw: string): Buffer {
+  if (/^[0-9a-fA-F]{64}$/.test(raw)) return Buffer.from(raw, 'hex')
+  const b = Buffer.from(raw, 'utf8')
+  if (b.length === 32) return b
+  return createHash('sha256').update(raw).digest()
+}
+
 function getEncryptionKey(): Buffer {
   const raw = process.env.ENVCTRL_ENCRYPTION_KEY
-  if (raw) {
-    // Accept hex (64 chars = 32 bytes) or raw (32 bytes)
-    if (/^[0-9a-fA-F]{64}$/.test(raw)) return Buffer.from(raw, 'hex')
-    const b = Buffer.from(raw, 'utf8')
-    if (b.length === 32) return b
-    // Hash anything else to 32 bytes (deterministic)
-    return createHash('sha256').update(raw).digest()
-  }
+  if (raw) return resolveKey(raw)
   // Dev fallback: hash the hostname + a known salt. NOT secure.
   const g = globalThis as Record<string, unknown>
   if (!g.__envctrl_secret_warned__) {
@@ -41,18 +46,28 @@ function getEncryptionKey(): Buffer {
   return createHash('sha256').update(`envctrl-dev:${hostname()}:do-not-use-in-prod`).digest()
 }
 
-export function encrypt(plaintext: string): string {
-  const key = getEncryptionKey()
+/**
+ * Encrypt plaintext with an optional explicit key (32 bytes).
+ * When omitted, uses ENVCTRL_ENCRYPTION_KEY (or the dev fallback).
+ */
+export function encrypt(plaintext: string, key?: Buffer): string {
+  const k = key ?? getEncryptionKey()
   const iv = randomBytes(12)
-  const cipher = createCipheriv('aes-256-gcm', key, iv)
+  const cipher = createCipheriv('aes-256-gcm', k, iv)
   const ct = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
   const tag = cipher.getAuthTag()
-  // For empty plaintext, ct is empty; we still emit iv + tag so the
-  // format is uniform and auth still applies.
   return `${PREFIX}${iv.toString('hex')}:${ct.toString('hex')}:${tag.toString('hex')}`
 }
 
-export function decrypt(stored: string): string {
+/**
+ * Decrypt a stored value with an optional explicit key. When omitted,
+ * uses ENVCTRL_ENCRYPTION_KEY.
+ *
+ * Returns '' on GCM auth failure (so the app keeps running). Legacy
+ * plaintext (no `enc:v1:` prefix) is returned as-is so callers can
+ * pass it back through `encrypt()` to migrate.
+ */
+export function decrypt(stored: string, key?: Buffer): string {
   if (!stored) return ''
   if (!stored.startsWith(PREFIX)) {
     // Legacy plaintext — return as-is. Caller is responsible for
@@ -65,11 +80,11 @@ export function decrypt(stored: string): string {
   if (!ivHex || !tagHex || parts.length < 3) {
     throw new Error('malformed encrypted value')
   }
-  const key = getEncryptionKey()
+  const k = key ?? getEncryptionKey()
   const iv = Buffer.from(ivHex, 'hex')
   const ct = ctHex ? Buffer.from(ctHex, 'hex') : Buffer.alloc(0)
   const tag = Buffer.from(tagHex, 'hex')
-  const decipher = createDecipheriv('aes-256-gcm', key, iv)
+  const decipher = createDecipheriv('aes-256-gcm', k, iv)
   decipher.setAuthTag(tag)
   try {
     const pt = Buffer.concat([decipher.update(ct), decipher.final()])

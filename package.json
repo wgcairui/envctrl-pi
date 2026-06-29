@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "node scripts/predev-check.mjs && tsx watch src/index.ts",
     "start": "node --enable-source-maps src/index.js",
-    "build": "cd web && bunx vite build && cd .. && tsc -p tsconfig.json && cp src/storage/schema.sql dist/storage/schema.sql",
-    "build:server": "tsc -p tsconfig.json",
+    "build": "cd web && bunx vite build && cd .. && tsc -p tsconfig.json && tsc -p tsconfig.scripts.json && cp src/storage/schema.sql dist/storage/schema.sql",
+    "build:server": "tsc -p tsconfig.json && tsc -p tsconfig.scripts.json",
     "build:web": "cd web && bunx vite build",
     "dev:web": "cd web && bunx vite",
     "postinstall": "node scripts/check-native-abi.mjs",
@@ -35,6 +35,7 @@
     "modbus-serial": "^8.0.25",
     "onoff": "^6.0.3",
     "pino": "^9.5.0",
+    "recharts": "^3.9.0",
     "serialport": "^13.0.0",
     "yaml": "^2.6.0",
     "zod": "^3.23.0"
