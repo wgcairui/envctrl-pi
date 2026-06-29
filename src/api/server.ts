@@ -18,6 +18,7 @@ import { piRoutes } from './routes/pi.js'
 import { streamRoutes } from './routes/stream.js'
 import { piAgentLLMRoutes } from './routes/piAgent.js'
 import { llmProviderRoutes } from './routes/llmProviders.js'
+import { adminRoutes } from './routes/admin.js'
 import { LLMProviderRepo } from '../storage/llmProviderRepo.js'
 import type { AuditRepo } from '../storage/repositories.js'
 
@@ -133,6 +134,7 @@ export function buildApp(deps: Deps) {
     .use(piRoutes(() => deps.pi))
     .use(streamRoutes())
     .use(llmProviderRoutes(() => deps.llmProviders, () => deps.audit))
+    .use(adminRoutes(() => deps.llmProviders, () => deps.audit))
     .use(
       piAgentLLMRoutes(() => ({
         cfg: deps.cfg,

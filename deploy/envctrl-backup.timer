@@ -1,0 +1,12 @@
+[Unit]
+Description=envctrl nightly backup timer
+Requires=envctrl-backup.service
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+# If the machine was off at 03:00, run on next boot within 15 min.
+Persistent=true
+Unit=envctrl-backup.service
+
+[Install]
+WantedBy=timers.target

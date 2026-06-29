@@ -1,0 +1,14 @@
+[Unit]
+Description=envctrl nightly backup
+Wants=envctrl.service
+After=envctrl.service
+
+[Service]
+Type=oneshot
+User=envctrl
+Group=envctrl
+# Run the installed wrapper script; install.sh copies backup.sh into
+# /usr/local/bin/envctrl-backup so the path here is stable.
+ExecStart=/usr/local/bin/envctrl-backup
+Nice=10
+PrivateTmp=true
