@@ -19,9 +19,11 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@elysiajs/bearer": "^1.4.4",
     "@elysiajs/cors": "^1.4.0",
     "@elysiajs/eden": "^1.4.0",
     "@elysiajs/node": "^1.4.5",
+    "@elysiajs/openapi": "^1.4.15",
     "@elysiajs/static": "^1.4.0",
     "@serialport/parser-delimiter": "^13.0.0",
     "@serialport/parser-readline": "^13.0.0",

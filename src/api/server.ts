@@ -2,6 +2,8 @@ import { Elysia } from 'elysia'
 import { node } from '@elysiajs/node'
 import cors from '@elysiajs/cors'
 import { staticPlugin } from '@elysiajs/static'
+import { openapi } from '@elysiajs/openapi'
+import { bearer } from '@elysiajs/bearer'
 import path from 'node:path'
 import { existsSync, readFileSync } from 'node:fs'
 import type { AppConfig } from '../config/loader.js'
@@ -28,7 +30,66 @@ export interface Deps {
  * Exporting this as the type source for Eden end-to-end types.
  */
 export function buildApp(deps: Deps) {
-  const app = new Elysia({ adapter: node() }).use(cors())
+  const app = new Elysia({ adapter: node() })
+    .use(cors())
+    // Optional Bearer auth: when ENVCTRL_API_TOKEN is set, every /api/* request
+    // (except /api/health and /api/stream) must carry `Authorization: Bearer <token>`.
+    // This is enough for LAN deployment; for multi-user see Better Auth plugin.
+    .use(
+      bearer({
+        extract: { header: 'Authorization' },
+      })
+    )
+    .onBeforeHandle(({ request, set, path }) => {
+      const required = process.env.ENVCTRL_API_TOKEN
+      if (!required) return
+      // Public paths: health, SSE stream, OpenAPI docs
+      if (
+        path === '/api/health' ||
+        path.startsWith('/api/stream') ||
+        path.startsWith('/openapi')
+      ) return
+      const auth = request.headers.get('authorization')
+      if (auth !== `Bearer ${required}`) {
+        set.status = 401
+        return { message: 'Unauthorized' }
+      }
+    })
+    // Hardware-aware error handling: log all unhandled errors with stack
+    .onError(({ code, error, set, path }) => {
+      const msg = error instanceof Error ? error.message : String(error)
+      // eslint-disable-next-line no-console
+      console.error(`[api error] ${path} ${code}: ${msg}`)
+      if (code === 'VALIDATION') {
+        set.status = 422
+        return { message: 'validation error', detail: msg }
+      }
+      if (code === 'NOT_FOUND') {
+        set.status = 404
+        return { message: 'not found' }
+      }
+      set.status = 500
+      return { message: 'internal error' }
+    })
+    // Auto-generated OpenAPI spec + Swagger UI at /openapi
+    .use(
+      openapi({
+        documentation: {
+          info: {
+            title: 'envctrl API',
+            version: '0.1.0',
+            description: 'Raspberry Pi environment control — devices, samples, alarms, control, Pi agent',
+          },
+          tags: [
+            { name: 'devices', description: 'Device registry and current state' },
+            { name: 'samples', description: 'Time-series history per device/point' },
+            { name: 'alarms', description: 'Active and recent alarm events' },
+            { name: 'control', description: 'Write commands to devices' },
+            { name: 'pi', description: 'Pi system introspection and configuration' },
+          ],
+        },
+      })
+    )
 
   // Serve web/dist if present (production single-process mode)
   const distDir = path.resolve(process.cwd(), 'web/dist')
@@ -41,7 +102,6 @@ export function buildApp(deps: Deps) {
         alwaysStatic: false,
       })
     )
-    // SPA fallback: serve index.html for any non-/api GET that didn't match
     const indexPath = path.join(distDir, 'index.html')
     if (existsSync(indexPath)) {
       const indexHtml = readFileSync(indexPath, 'utf8')
@@ -53,19 +113,19 @@ export function buildApp(deps: Deps) {
   }
 
   app
-      .get('/api/health', () => ({ ok: true, ts: Date.now() }))
-      .use(
-        devicesRoutes(
-          () => deps.registry,
-          () => deps.cfg,
-          () => deps.samples
-        )
+    .get('/api/health', () => ({ ok: true, ts: Date.now() }))
+    .use(
+      devicesRoutes(
+        () => deps.registry,
+        () => deps.cfg,
+        () => deps.samples
       )
-      .use(samplesRoutes(() => deps.samples))
-      .use(alarmsRoutes(() => deps.alarms))
-      .use(controlRoutes(() => deps.registry))
-      .use(piRoutes(() => deps.pi))
-      .use(streamRoutes())
+    )
+    .use(samplesRoutes(() => deps.samples))
+    .use(alarmsRoutes(() => deps.alarms))
+    .use(controlRoutes(() => deps.registry))
+    .use(piRoutes(() => deps.pi))
+    .use(streamRoutes())
 
   return app
 }
