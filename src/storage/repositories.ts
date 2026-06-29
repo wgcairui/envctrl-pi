@@ -183,4 +183,18 @@ export class AuditRepo {
   log(actor: string, action: string, detail?: unknown): void {
     this.stmt.run(actor, action, detail !== undefined ? JSON.stringify(detail) : null, Date.now())
   }
+  /** Read recent audit entries, optionally filtered by actor. */
+  recent(opts: { actor?: string; limit?: number } = {}): Array<{
+    id: number; actor: string; action: string; detail_json: string; ts: number
+  }> {
+    const limit = opts.limit ?? 100
+    if (opts.actor) {
+      return this.db
+        .prepare(`SELECT id, actor, action, detail_json, ts FROM audit WHERE actor = ? ORDER BY id DESC LIMIT ?`)
+        .all(opts.actor, limit) as any
+    }
+    return this.db
+      .prepare(`SELECT id, actor, action, detail_json, ts FROM audit ORDER BY id DESC LIMIT ?`)
+      .all(limit) as any
+  }
 }

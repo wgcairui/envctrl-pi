@@ -30,7 +30,7 @@ async function main() {
 
   audit.log('system', 'startup', { deviceCount: cfg.devices.length })
 
-  const app = buildApp({ cfg, registry, samples, alarms: alarmRepo, pi: piAgent })
+  const app = buildApp({ cfg, registry, samples, alarms: alarmRepo, audit, pi: piAgent })
   app.listen({ port: cfg.server.port })
 
   console.log(`envctrl listening on http://0.0.0.0:${cfg.server.port}`)

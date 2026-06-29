@@ -16,12 +16,15 @@ import { alarmsRoutes } from './routes/alarms.js'
 import { controlRoutes } from './routes/control.js'
 import { piRoutes } from './routes/pi.js'
 import { streamRoutes } from './routes/stream.js'
+import { piAgentLLMRoutes } from './routes/piAgent.js'
+import type { AuditRepo } from '../storage/repositories.js'
 
 export interface Deps {
   cfg: AppConfig
   registry: DeviceRegistry
   samples: SampleRepo
   alarms: AlarmRepo
+  audit: AuditRepo
   pi: PiAgent
 }
 
@@ -126,6 +129,16 @@ export function buildApp(deps: Deps) {
     .use(controlRoutes(() => deps.registry))
     .use(piRoutes(() => deps.pi))
     .use(streamRoutes())
+    .use(
+      piAgentLLMRoutes(() => ({
+        cfg: deps.cfg,
+        registry: deps.registry,
+        samples: deps.samples,
+        alarms: deps.alarms,
+        audit: deps.audit,
+        agent: deps.pi,
+      }))
+    )
 
   return app
 }
