@@ -9,9 +9,11 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node --enable-source-maps src/index.js",
-    "build": "tsc -p tsconfig.json && vite build",
+    "build": "cd web && bunx vite build && cd .. && tsc -p tsconfig.json",
     "build:server": "tsc -p tsconfig.json",
-    "build:web": "vite build",
+    "build:web": "cd web && bunx vite build",
+    "dev:web": "cd web && bunx vite",
+    "dev:server": "tsx watch src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json"
@@ -23,6 +25,7 @@
     "@elysiajs/static": "^1.4.0",
     "@serialport/parser-delimiter": "^13.0.0",
     "@serialport/parser-readline": "^13.0.0",
+    "@tanstack/react-query": "^5.101.2",
     "better-sqlite3": "^12.0.0",
     "elysia": "^1.4.0",
     "modbus-serial": "^8.0.25",

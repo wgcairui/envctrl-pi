@@ -1,6 +1,9 @@
 import { Elysia } from 'elysia'
 import { node } from '@elysiajs/node'
 import cors from '@elysiajs/cors'
+import { staticPlugin } from '@elysiajs/static'
+import path from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
 import type { AppConfig } from '../config/loader.js'
 import type { DeviceRegistry } from '../core/deviceRegistry.js'
 import type { SampleRepo, AlarmRepo } from '../storage/repositories.js'
@@ -25,9 +28,31 @@ export interface Deps {
  * Exporting this as the type source for Eden end-to-end types.
  */
 export function buildApp(deps: Deps) {
-  return (
-    new Elysia({ adapter: node() })
-      .use(cors())
+  const app = new Elysia({ adapter: node() }).use(cors())
+
+  // Serve web/dist if present (production single-process mode)
+  const distDir = path.resolve(process.cwd(), 'web/dist')
+  if (existsSync(distDir)) {
+    app.use(
+      staticPlugin({
+        assets: distDir,
+        prefix: '/',
+        indexHTML: true,
+        alwaysStatic: false,
+      })
+    )
+    // SPA fallback: serve index.html for any non-/api GET that didn't match
+    const indexPath = path.join(distDir, 'index.html')
+    if (existsSync(indexPath)) {
+      const indexHtml = readFileSync(indexPath, 'utf8')
+      app.get('*', ({ set }) => {
+        if (set.headers) set.headers['content-type'] = 'text/html; charset=utf-8'
+        return indexHtml
+      })
+    }
+  }
+
+  app
       .get('/api/health', () => ({ ok: true, ts: Date.now() }))
       .use(
         devicesRoutes(
@@ -41,7 +66,8 @@ export function buildApp(deps: Deps) {
       .use(controlRoutes(() => deps.registry))
       .use(piRoutes(() => deps.pi))
       .use(streamRoutes())
-  )
+
+  return app
 }
 
 export type App = ReturnType<typeof buildApp>

@@ -5,8 +5,6 @@ export default defineConfig({
     globals: false,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
-    // better-sqlite3 native binding requires Node runtime, not Bun's.
-    // Vitest uses Node which is what we want here.
     pool: 'threads',
   },
   resolve: {
