@@ -37,10 +37,13 @@ interface PendingConfirmation {
 export function piAgentLLMRoutes(deps: () => PiAgentLLMDeps) {
   const app = new Elysia({ prefix: '/api/pi/agent' })
 
-  // In-process map of pending ReAct confirmations. In production this
-  // would live in Redis or the session store; for a single-process Pi,
-  // an in-memory map keyed by confirmation id is fine. IDs are randomUUID.
+  // In-process map of pending ChatAgent confirmations (L1).
+  // ReActAgent (L3) keeps its own pending map inside the agent instance;
+  // /confirm dispatches to whichever one owns the id.
   const pendingConfirms = new Map<string, PendingConfirmation>()
+  // Track the most recent ReActAgent so /confirm can dispatch confirmations
+  // to it. Single-process Pi: only one in-flight ReAct at a time. The
+  // reference is cleared when the agent finishes or is aborted.
   let reactAgent: ReActAgent | null = null
 
   function buildToolCtx(): ToolContext {
@@ -137,35 +140,15 @@ export function piAgentLLMRoutes(deps: () => PiAgentLLMDeps) {
   /**
    * ReAct: returns Server-Sent Events stream of AgentStep JSON.
    * The client POSTs the goal; the route runs the agent and streams steps.
-   * For confirmations, the route's `confirm` ctx calls a Promise that
-   * resolves when /confirm is called.
+   * High-risk tool confirmation is handled inside the ReActAgent via its
+   * own pending map; the route exposes that via /confirm below.
    */
-  app.post('/react', async ({ body, request }) => {
+  app.post('/react', async ({ body }) => {
     const llm = buildLLMClient()
     const tools = buildDefaultToolRegistry()
     const ctx = buildToolCtx()
-    // Custom confirm: park in pendingConfirms, resolve when /confirm hits
-    const reactCtx: ToolContext = {
-      ...ctx,
-      confirm: async (desc: string) => {
-        return new Promise<boolean>((resolve) => {
-          const id = randomUUID()
-          pendingConfirms.set(id, { id, tool: 'pending', input: desc, createdAt: Date.now() })
-          // We need to know which tool_use_id we're resolving for. The
-          // ReActAgent maps its own id; we need to plumb it. Workaround:
-          // the ReActAgent uses its own internal pending map; here we
-          // just register a placeholder and rely on reactAgent.resolveConfirmation.
-          // For now, this confirm is invoked only for high-risk tools
-          // through reactAgent (which has its own pending map), NOT through
-          // the tool registry. The ToolContext.confirm passed to tools.call
-          // is only used when ToolRegistry.call() is invoked directly.
-          // In the ReActAgent path, high-risk confirmation is handled
-          // internally and ctx.confirm is never called. So we never reach here.
-          resolve(true) // unreachable in practice
-        })
-      },
-    }
-    reactAgent = new ReActAgent(llm, tools, reactCtx)
+    const agent = new ReActAgent(llm, tools, ctx)
+    reactAgent = agent
     const goal = (body as any).goal as string
 
     const enc = new TextEncoder()
@@ -179,7 +162,7 @@ export function piAgentLLMRoutes(deps: () => PiAgentLLMDeps) {
           }
         }
         try {
-          for await (const step of reactAgent!.run({ goal })) {
+          for await (const step of agent.run({ goal })) {
             send(step)
             if (step.type === 'final' || step.type === 'aborted') break
           }
@@ -189,6 +172,9 @@ export function piAgentLLMRoutes(deps: () => PiAgentLLMDeps) {
           )
         } finally {
           try { controller.close() } catch { /* */ }
+          // Only clear if this is still the same agent — another /react
+          // request may have replaced us.
+          if (reactAgent === agent) reactAgent = null
         }
       },
     })
@@ -202,33 +188,51 @@ export function piAgentLLMRoutes(deps: () => PiAgentLLMDeps) {
     })
   })
 
+  /**
+   * Resolves a pending confirmation. Routes by id:
+   *   - L1 (ChatAgent): looked up in the route's `pendingConfirms` map;
+   *     on approve, the tool is executed and the result returned.
+   *   - L3 (ReActAgent): forwarded to `reactAgent.resolveConfirmation`;
+   *     the actual tool result is streamed back via the open SSE
+   *     connection, so we just acknowledge here.
+   * Denials (approve=false) are logged and the agent aborts.
+   */
   app.post(
     '/confirm',
     async ({ body, set }) => {
+      const d = deps()
+
+      // L3 path — the ReActAgent owns the pending map.
+      if (reactAgent) {
+        const resolved = reactAgent.resolveConfirmation(body.confirmationId, body.approve)
+        if (resolved) {
+          d.audit.log('llm', body.approve ? 'tool.confirmed' : 'tool.denied_by_user', {
+            id: body.confirmationId,
+            source: 'react',
+          })
+          return { ok: body.approve, source: 'react' }
+        }
+      }
+
+      // L1 path — ChatAgent's staged confirmation.
       const conf = pendingConfirms.get(body.confirmationId)
       if (!conf) {
         set.status = 404
         return { message: 'confirmation not found or expired' }
       }
-      if (body.approve) {
-        // Execute the tool
-        const d = deps()
-        const tools = buildDefaultToolRegistry()
-        const ctx = buildToolCtx()
-        try {
-          const r = await tools.call(conf.tool, conf.input, { ...ctx, confirm: async () => true })
-          pendingConfirms.delete(body.confirmationId)
-          d.audit.log('llm', 'tool.confirmed', { id: body.confirmationId, tool: conf.tool, result: r })
-          return { ok: r.ok, data: r.data, error: r.error }
-        } catch (e) {
-          const err = (e as Error).message
-          pendingConfirms.delete(body.confirmationId)
-          return { ok: false, error: err }
-        }
-      } else {
-        pendingConfirms.delete(body.confirmationId)
-        deps().audit.log('llm', 'tool.denied_by_user', { id: body.confirmationId, tool: conf.tool })
-        return { ok: false, error: 'denied by user' }
+      pendingConfirms.delete(body.confirmationId)
+      if (!body.approve) {
+        d.audit.log('llm', 'tool.denied_by_user', { id: body.confirmationId, tool: conf.tool })
+        return { ok: false, error: 'denied by user', source: 'chat' }
+      }
+      const tools = buildDefaultToolRegistry()
+      const ctx = buildToolCtx()
+      try {
+        const r = await tools.call(conf.tool, conf.input, { ...ctx, confirm: async () => true })
+        d.audit.log('llm', 'tool.confirmed', { id: body.confirmationId, tool: conf.tool, result: r })
+        return { ok: r.ok, data: r.data, error: r.error, source: 'chat' }
+      } catch (e) {
+        return { ok: false, error: (e as Error).message, source: 'chat' }
       }
     },
     {
@@ -248,6 +252,3 @@ export function piAgentLLMRoutes(deps: () => PiAgentLLMDeps) {
 
   return app
 }
-
-// randomUUID shim for older node (Node 24 has it natively)
-import { randomUUID } from 'node:crypto'
