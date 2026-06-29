@@ -1,5 +1,6 @@
 import type { Database, Statement } from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
+import { encrypt, decrypt, isEncrypted } from './secrets.js'
 
 export interface LLMProvider {
   id: string
@@ -114,7 +115,7 @@ export class LLMProviderRepo {
       id,
       input.name,
       input.baseUrl,
-      input.apiKey,
+      input.apiKey ? encrypt(input.apiKey) : '',
       input.model,
       input.isPreset ? 1 : 0,
       input.notes ?? null,
@@ -128,10 +129,24 @@ export class LLMProviderRepo {
   update(id: string, patch: Partial<LLMProviderInput>): LLMProvider | null {
     const current = this.get(id)
     if (!current) return null
+    // If the patch supplies a new apiKey, encrypt it. If it doesn't
+    // (undefined), keep the current (already-encrypted) value.
+    const newKey =
+      patch.apiKey === undefined
+        ? undefined // signal: do not change
+        : patch.apiKey === ''
+          ? '' // explicit clear
+          : encrypt(patch.apiKey)
+    // Re-encrypt current.apiKey on the way down too (in case it's
+    // legacy plaintext from a pre-encryption save).
+    const storedCurrent = this.getByIdStmt.get(id) as any
+    const reEncryptedCurrent = storedCurrent?.api_key && !isEncrypted(storedCurrent.api_key)
+      ? encrypt(current.apiKey)
+      : null
     this.updateStmt.run(
       patch.name ?? current.name,
       patch.baseUrl ?? current.baseUrl,
-      patch.apiKey ?? current.apiKey,
+      newKey ?? reEncryptedCurrent ?? (this.getByIdStmt.get(id) as any).api_key,
       patch.model ?? current.model,
       patch.notes ?? current.notes ?? null,
       Date.now(),
@@ -162,7 +177,7 @@ export class LLMProviderRepo {
         `preset:${slug(preset.name)}`,
         preset.name,
         preset.baseUrl,
-        preset.apiKey,
+        '',               // empty apiKey — user must fill in via UI
         preset.model,
         1,                // is_preset
         preset.notes ?? null,
@@ -176,11 +191,16 @@ export class LLMProviderRepo {
 }
 
 function rowToProvider(r: any): LLMProvider {
+  // apiKey is stored encrypted; decrypt on read. If a legacy plaintext
+  // value is found, decrypt() returns it as-is — the next save will
+  // re-encrypt.
+  const storedKey: string = r.api_key ?? ''
+  const apiKey = storedKey ? decrypt(storedKey) : ''
   return {
     id: r.id,
     name: r.name,
     baseUrl: r.base_url,
-    apiKey: r.api_key,
+    apiKey,
     model: r.model,
     isPreset: !!r.is_preset,
     isActive: !!r.is_active,

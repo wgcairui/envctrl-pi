@@ -130,7 +130,29 @@ sudo systemctl restart envctrl
 
 Open the **pi-agent** tab in the web UI. The status indicator (● / ○) shows whether the LLM is configured. All LLM-initiated actions are recorded in the `audit` table with `actor='llm'`.
 
+**Provider management (cc-switch style):** the **config** tab lists all stored providers. 3 built-in presets (minimax, DeepSeek, Anthropic) are seeded on first boot. Pick one, fill in the apiKey, hit Test, then Activate. Active provider can be switched hot — no restart.
+
 **Safety**: high-risk actions (config apply, udev install, systemctl restart, reboot) require explicit user confirmation via an amber dialog in the web UI. Low-risk actions (toggling a relay/GPIO) auto-execute.
+
+## Encryption at rest (LLM apiKeys)
+
+Provider `apiKey` values are stored encrypted in the `llm_provider` table using **AES-256-GCM** (authenticated encryption with associated data). The key is read from `ENVCTRL_ENCRYPTION_KEY`:
+
+```bash
+# Generate a key once
+openssl rand -hex 32
+# e.g. a1b2c3d4e5f6... (64 hex chars = 32 bytes)
+
+# Persist it
+echo "ENVCTRL_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> /etc/envctrl/env
+sudo systemctl restart envctrl
+```
+
+Accepted formats: 64 hex chars, 32 raw bytes, or any string (hashed via SHA-256 to 32 bytes — deterministic, less secure).
+
+**Dev fallback**: if `ENVCTRL_ENCRYPTION_KEY` is unset, envctrl derives a deterministic key from the hostname and emits a one-time console warning. **Do not use in production.** Existing plaintext keys (from older versions) are automatically re-encrypted on the next save.
+
+**Key rotation**: changing the key invalidates all existing encrypted keys. To migrate, either re-enter keys in the ConfigPage after the rotation, or run a small migration script (not provided — open an issue if needed).
 
 ## Security notes
 

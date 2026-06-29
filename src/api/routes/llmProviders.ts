@@ -114,7 +114,11 @@ export function llmProviderRoutes(repo: () => LLMProviderRepo, audit: () => Audi
     }
     audit().log('user', 'llm.provider.test', { id: p.id, name: p.name })
     try {
-      const client = new Anthropic({ apiKey: p.apiKey, baseURL: p.baseUrl })
+      const client = new Anthropic({
+        apiKey: p.apiKey,
+        baseURL: p.baseUrl,
+        defaultHeaders: { 'X-Api-Key': p.apiKey },
+      })
       const start = Date.now()
       const res = await client.messages.create({
         model: p.model,

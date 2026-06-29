@@ -79,7 +79,15 @@ export class LLMClient {
     this._model = cfg.model
     this.audit = opts.audit
     this.actor = opts.actor ?? 'llm'
-    this.client = new Anthropic({ apiKey: cfg.apiKey, baseURL: cfg.baseUrl })
+    // defaultHeaders: some providers (minimax, certain proxies) accept
+    // only `X-Api-Key`; the Anthropic SDK sends `x-api-key` (same
+    // wire header per HTTP RFC, but some upstreams are strict about the
+    // exact form). Send BOTH to be safe.
+    this.client = new Anthropic({
+      apiKey: cfg.apiKey,
+      baseURL: cfg.baseUrl,
+      defaultHeaders: { 'X-Api-Key': cfg.apiKey },
+    })
   }
 
   /** Build a new client from a stored LLMProvider row (overrides env). */
