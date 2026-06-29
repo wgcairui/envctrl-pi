@@ -48,14 +48,15 @@ describe('secrets (AES-256-GCM)', () => {
     expect(() => decrypt('enc:v1:abc:def')).toThrow(/malformed/)
   })
 
-  it('detects tampering via auth tag', () => {
+  it('detects tampering via auth tag — returns empty + warns', () => {
     const ct = encrypt('sk-test-12345')
     // Flip a hex char in the middle (the ciphertext)
     const parts = ct.split(':')
     const ctPart = parts[3]!
     const tampered = ctPart.slice(0, 4) + (ctPart[4] === '0' ? '1' : '0') + ctPart.slice(5)
     parts[3] = tampered
-    expect(() => decrypt(parts.join(':'))).toThrow()
+    // New behavior: don't throw, return empty so the app stays up
+    expect(decrypt(parts.join(':'))).toBe('')
   })
 })
 
@@ -116,7 +117,7 @@ describe('LLMProviderRepo with encryption', () => {
     db2.close()
   })
 
-  it('fails to decrypt with a different ENCRYPTION_KEY', () => {
+  it('decrypts to empty string with a different ENCRYPTION_KEY (does not throw)', () => {
     const db = openDb('./data/enc_test.db')
     const repo = new LLMProviderRepo(db)
     const p = repo.create({ name: 'X', baseUrl: 'u', apiKey: 'sk-test', model: 'm' })
@@ -125,7 +126,9 @@ describe('LLMProviderRepo with encryption', () => {
     process.env.ENVCTRL_ENCRYPTION_KEY = 'c'.repeat(64)
     const db2 = openDb('./data/enc_test.db')
     const repo2 = new LLMProviderRepo(db2)
-    expect(() => repo2.get(p.id)).toThrow()
+    // Behavior: don't throw, return empty apiKey. Operator must re-enter.
+    const r = repo2.get(p.id)
+    expect(r?.apiKey).toBe('')
     db2.close()
   })
 })

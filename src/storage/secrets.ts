@@ -53,6 +53,7 @@ export function encrypt(plaintext: string): string {
 }
 
 export function decrypt(stored: string): string {
+  if (!stored) return ''
   if (!stored.startsWith(PREFIX)) {
     // Legacy plaintext — return as-is. Caller is responsible for
     // re-saving it (which will encrypt it).
@@ -70,8 +71,25 @@ export function decrypt(stored: string): string {
   const tag = Buffer.from(tagHex, 'hex')
   const decipher = createDecipheriv('aes-256-gcm', key, iv)
   decipher.setAuthTag(tag)
-  const pt = Buffer.concat([decipher.update(ct), decipher.final()])
-  return pt.toString('utf8')
+  try {
+    const pt = Buffer.concat([decipher.update(ct), decipher.final()])
+    return pt.toString('utf8')
+  } catch (e) {
+    // GCM auth tag mismatch — most likely the data was encrypted with
+    // a different key. Return empty so the app keeps running; the
+    // operator will see the empty apiKey in the UI and re-enter it.
+    const g = globalThis as Record<string, unknown>
+    if (!g.__envctrl_decrypt_warned__) {
+      console.warn(
+        `[secrets] decrypt failed for one or more stored values. ` +
+          `Most likely ENVCTRL_ENCRYPTION_KEY was changed since these values ` +
+          `were saved, or the data was encrypted on another host. ` +
+          `Returning empty string. The user will need to re-enter the apiKey.`
+      )
+      g.__envctrl_decrypt_warned__ = true
+    }
+    return ''
+  }
 }
 
 export function isEncrypted(s: string): boolean {
