@@ -1,4 +1,4 @@
-import type { Database as DB } from 'better-sqlite3'
+import type { Database, Statement } from 'better-sqlite3'
 import type { Sample, SampleValue, AlarmEvent, AlarmRule } from '../shared/types.js'
 
 function jsonValue(v: SampleValue): string {
@@ -9,12 +9,12 @@ function parseValue(s: string): SampleValue {
 }
 
 export class SampleRepo {
-  private insertStmt: DB.Statement
-  private upsertLatestStmt: DB.Statement
-  private getLatestStmt: DB.Statement
-  private getHistoryStmt: DB.Statement
+  private insertStmt: Statement
+  private upsertLatestStmt: Statement
+  private getLatestStmt: Statement
+  private getHistoryStmt: Statement
 
-  constructor(private db: DB) {
+  constructor(private db: Database) {
     this.insertStmt = db.prepare(
       `INSERT INTO sample (device_id, point_id, value, quality, ts) VALUES (?, ?, ?, ?, ?)`
     )
@@ -81,14 +81,14 @@ export class SampleRepo {
 }
 
 export class AlarmRepo {
-  private insertEventStmt: DB.Statement
-  private resolveStmt: DB.Statement
-  private listActiveStmt: DB.Statement
-  private listRecentStmt: DB.Statement
-  private upsertRuleStmt: DB.Statement
-  private listRulesStmt: DB.Statement
+  private insertEventStmt: Statement
+  private resolveStmt: Statement
+  private listActiveStmt: Statement
+  private listRecentStmt: Statement
+  private upsertRuleStmt: Statement
+  private listRulesStmt: Statement
 
-  constructor(private db: DB) {
+  constructor(private db: Database) {
     this.insertEventStmt = db.prepare(
       `INSERT INTO alarm (id, rule_id, device_id, point_id, value, severity, message, triggered_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -176,8 +176,8 @@ function rowToEvent(r: any): AlarmEvent {
 }
 
 export class AuditRepo {
-  private stmt: DB.Statement
-  constructor(private db: DB) {
+  private stmt: Statement
+  constructor(private db: Database) {
     this.stmt = db.prepare(`INSERT INTO audit (actor, action, detail_json, ts) VALUES (?, ?, ?, ?)`)
   }
   log(actor: string, action: string, detail?: unknown): void {

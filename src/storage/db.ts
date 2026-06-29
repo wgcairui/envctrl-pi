@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import type { Database as DB } from 'better-sqlite3'
+import type { Database as DbType } from 'better-sqlite3'
 import { readFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 /**
  * Open a SQLite database at `path`, create parent dirs, enable WAL, apply schema.
  */
-export function openDb(path: string): DB {
+export function openDb(path: string): DbType {
   mkdirSync(dirname(path), { recursive: true })
   const db = new Database(path)
   db.pragma('journal_mode = WAL')

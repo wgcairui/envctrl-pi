@@ -36,27 +36,29 @@ export class SerialBus extends EventEmitter implements IOBus {
   private async open(): Promise<void> {
     if (this.closed) return
     return new Promise<void>((resolve, reject) => {
-      const port = new SerialPort(
-        { path: this.cfg.path, baudRate: this.cfg.baudRate, lock: true, autoOpen: false },
-        (err) => {
-          if (err) {
-            this.emit('error', err)
-            reject(err)
-            return
-          }
-          this.port = port
-          this.reconnectAttempt = 0
-          this.emit('open')
-          resolve()
-        }
-      )
+      const port = new SerialPort({
+        path: this.cfg.path,
+        baudRate: this.cfg.baudRate,
+        lock: true,
+        autoOpen: false,
+      })
       port.on('close', () => {
         this.port = null
         this.emit('close')
         if (!this.closed) this.scheduleReconnect()
       })
-      port.on('error', (err) => {
+      port.on('error', (err: Error) => {
         this.emit('error', err)
+      })
+      port.open((err) => {
+        if (err) {
+          reject(err)
+          return
+        }
+        this.port = port
+        this.reconnectAttempt = 0
+        this.emit('open')
+        resolve()
       })
     })
   }
