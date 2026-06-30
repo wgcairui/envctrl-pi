@@ -1,213 +1,208 @@
 # envctrl
 
-Raspberry Pi 4 environment control platform built on Node 24 + ElysiaJS + React + Eden (end-to-end type safety).
+基于 **Node 24 + ElysiaJS + React + Eden** 的树莓派环境控制平台(Eden 提供端到端类型安全)。
 
-## What it does
+## 功能
 
-- **Device control**: Modbus RTU/TCP, GPIO digital in/out
-- **Environmental monitoring**: multi-sensor sampling with SQLite time-series storage
-- **Alarm/linking logic**: token-whitelist condition evaluator + cross-device actions
-- **Web panel**: React + Eden Treaty (single-source-of-truth types from backend)
-- **Pi self-management**: multi-UART device-tree overlays, udev rules, error detection — all routed through a small Python privilege shim (no root in the Node process)
+- **设备控制**:Modbus RTU/TCP、GPIO 数字输入/输出
+- **环境监测**:多传感器采样,SQLite 时序存储
+- **告警/联动逻辑**:token 白名单条件求值器 + 跨设备动作
+- **Web 面板**:React + Eden Treaty(单一类型源来自后端)
+- **树莓派自管理**:多 UART 设备树 overlay、udev 规则、错误检测 — 全部通过小型 Python 特权 shim 路由(Node 进程内不持有 root)
 
-See `docs/superpowers/specs/2026-06-28-envctrl-design.md` for the full design.
+完整设计见 `docs/superpowers/specs/2026-06-28-envctrl-design.md`。
 
-## Quick start (development)
+## 快速开始(开发)
 
 ```bash
-# install deps
+# 安装依赖
 bun install
 
-# run dev server only (uses tsx watch)
+# 仅运行 dev server(使用 tsx watch)
 bun run dev
 
-# run tests (vitest, uses Node 24 for native module loading)
+# 运行测试(vitest,使用 Node 24 加载 native 模块)
 bun run test
 
-# run web dev server (Vite, separate terminal — proxies /api to :3000)
+# 运行 web dev server(Vite,独立终端 — 通过 :3000 代理 /api)
 bun run dev:web
 ```
 
-## Production build (single binary process)
+## 生产构建(单一二进制进程)
 
 ```bash
-bun run build       # builds web/dist via Vite, then compiles server to dist/
-node dist/index.js  # serves API + static web on :3000
+bun run build       # 通过 Vite 构建 web/dist,然后编译 server 到 dist/
+node dist/index.js  # 在 :3000 同时提供 API 和静态 web
 ```
 
-`src/api/server.ts` automatically serves `web/dist/` if present (via `@elysiajs/static` + SPA fallback).
+`src/api/server.ts` 在 `web/dist/` 存在时自动服务它(通过 `@elysiajs/static` + SPA fallback)。
 
-## Layout
+## 目录结构
 
-- `src/` — backend (Elysia + drivers + core + Pi agent)
-- `web/` — frontend (React + Vite + Tailwind)
-- `scripts/pi-shim/` — Python privilege shim (installed on Pi)
-- `config/default.yaml` — runtime config
-- `deploy/` — systemd unit + install script
+- `src/` — 后端(Elysia + drivers + core + Pi agent)
+- `web/` — 前端(React + Vite + Tailwind)
+- `scripts/pi-shim/` — Python 特权 shim(部署在 Pi 上)
+- `config/default.yaml` — 运行时配置
+- `deploy/` — systemd unit + 安装脚本
 
-## Runtime
+## 运行时
 
-- **Node.js 24** (Active LTS) — required for native modules (`serialport`, `onoff`, `better-sqlite3`)
-- **Bun** — package manager and test runner
+- **Node.js 24**(Active LTS)— native 模块(`serialport`、`onoff`、`better-sqlite3`)需要
+- 端口 `:3000`(可通过 `config/default.yaml` 的 `server.port` 修改)
+- 数据落地在 `data/envctrl.db`(SQLite + WAL)
 
-The test runner is **vitest** (not bun's built-in test runner) because Bun's runtime cannot yet load better-sqlite3 (oven-sh/bun#4290).
+## Native 模块 ABI 陷阱
 
-## Native module ABI trap
+`serialport`、`onoff`、`better-sqlite3` 都是 **native 模块**,带 prebuilt `.node` 二进制。一旦 Node 升级主版本(比如 22 → 24),prebuilt 二进制就跟新 ABI 不兼容,加载时 segfault。
 
-`better-sqlite3` and `epoll` (onoff's dep) are N-API native addons. They are **compiled against the Node version that ran `bun install`**. If you switch Node major versions (24 → 26), you get `NODE_MODULE_VERSION mismatch` errors. The project has `scripts/check-native-abi.mjs` running as `postinstall` to detect this and print the fix:
+**修复:** 在装好 deps 之后跑 `npm rebuild`(参见 `.github/workflows/test.yml`)。CI 自动做了这件事;本地切换 Node 主版本时也要手动 rebuild。
+
+**不要**让 `postinstall` 静默自动 rebuild — 参见 `scripts/check-native-abi.mjs` 里的 rationale。
+
+## 部署到树莓派 4
+
+在 Pi 上(Bookworm):
 
 ```bash
-npm rebuild better-sqlite3
-npm rebuild epoll      # only if onoff stopped working
+# 1. 克隆 + 构建
+git clone <repo> /opt/envctrl && cd /opt/envctrl
+bun install && bun run build
+
+# 2. 安装(env 用户 + systemd + 权限 shim + backup timer)
+sudo ./deploy/install.sh
 ```
 
-DO NOT pin `engines.node` to a single version — the project supports Node 24+.
+`install.sh` 会:
+- 创建 `envctrl` 系统用户,加入 `dialout,gpio`
+- 装 Python 特权 shim 到 `/usr/local/libexec/`
+- 装 systemd unit 到 `/etc/systemd/system/envctrl.service`
+- 装 backup + restore + rotation 脚本到 `/usr/local/bin/`
+- 启用 nightly backup timer(envctrl-backup.timer,每天 03:00)
+- 创建 `/var/backups/envctrl/` 目录(0750,envctrl:envctrl 拥有)
 
-## Deploy to Raspberry Pi 4
+日志:`journalctl -u envctrl -f`。
 
-```bash
-# On the Pi (Bookworm 64-bit):
-git clone <repo> /opt/envctrl
-cd /opt/envctrl
-bun install
-bun run build
-sudo bash deploy/install.sh
+## Pi Agent 能力(Web → `/api/pi/*`)
 
-# Tail logs:
-sudo journalctl -u envctrl -f
+| Endpoint | 用途 |
+|---|---|
+| `GET /api/pi/overlays` | 列出已配置的 dtoverlay |
+| `POST /api/pi/config` | 安全地增加/移除 dtoverlay(dry-run 验证) |
+| `GET /api/pi/udev` | 列出已安装的 udev 规则 |
+| `POST /api/pi/udev` | 安装新 udev 规则(写 /etc/udev/rules.d) |
+| `POST /api/pi/service` | `systemctl start/stop/restart <unit>` |
+| `POST /api/pi/reboot` | 触发重启(需要 confirm) |
 
-# Open UI:
-# http://<pi-hostname>.local:3000
-```
+所有写操作都通过 **Python 权限 shim**(`scripts/pi-shim/envctrl_shim.py`)以 root 身份执行,Node 进程自身从不持 root。Shim 用严格白名单(只接受特定子命令和参数),由 `setup.sh` 以 `setuid` + 路径白名单方式安装。
 
-`deploy/install.sh` will:
-1. apt-install python3 + pigpio
-2. Create `envctrl` user (member of `dialout` + `gpio`)
-3. Install the privilege shim at `/usr/local/libexec/envctrl-shim` and the sudoers rule
-4. Install + start `envctrl.service` via systemd
+## LLM Agent(可选)
 
-## Pi Agent capabilities (Web → /api/pi/*)
+`/api/pi/agent` 下暴露三层 agent,使用活动 LLM provider(`/api/llm/providers`)配置:
 
-**System introspection:**
-- `GET /api/pi/info` — model, CPU temp, volts, uptime, load, memory, disk
-- `GET /api/pi/overlays` — current dtoverlay list with GPIO mapping
-- `GET /api/pi/devices` — `/dev/tty*`, `/dev/gpiochip*`
-- `GET /api/pi/logs` — journalctl tail for envctrl
+| Endpoint | Agent | 描述 |
+|---|---|---|
+| `GET /api/pi/agent/status` | — | 当前 LLM 是否配置好 |
+| `POST /api/pi/agent/chat` | L1 ChatAgent | 单轮 NL → tool call → 回复。低风险 write 自动执行,高风险 stage 成 `ConfirmRequest`。 |
+| `POST /api/pi/agent/diagnose` | L2 DiagnoseAgent | 只读调查器,最多 8 步,返回 `{summary, findings, suggestions}`。 |
+| `POST /api/pi/agent/react` | L3 ReActAgent | 自主循环,通过 **SSE** 流式输出 `AgentStep` 事件。`confirm_request` step 需要 `POST /api/pi/agent/confirm`。 |
+| `POST /api/pi/agent/confirm` | — | Resolve 一个待定的 confirmation(approve / deny)。L1(ChatAgent)和 L3(ReActAgent)都路由到这里。 |
+| `GET /api/pi/agent/audit` | — | 最近的 LLM 活动(actor='llm') |
 
-**Configuration:**
-- `POST /api/pi/config` — plan / apply dtoverlay changes (dryRun by default; writes `/boot/firmware/config.txt` with timestamped backup; refuses unknown overlays; rejects GPIO conflicts)
-- `POST /api/pi/udev` — install / reload udev rules
+Web 端的 Pi Agent 页面有三个 tab:`chat` / `diagnose` / `react`。ReAct tab 接 SSE 流并实时渲染 step(包括 Confirm/Deny 按钮)。
 
-**LLM integration (`/api/pi/agent/*`):**
-- `GET /api/pi/agent/status` — LLM configured?
-- `POST /api/pi/agent/chat` — L1 single-shot natural-language → tool call → reply
-- `POST /api/pi/agent/diagnose` — L2 read-only multi-turn investigation
-- `POST /api/pi/agent/react` — L3 autonomous loop (SSE stream)
-- `POST /api/pi/agent/confirm` — execute a high-risk tool the LLM requested
-- `GET /api/pi/agent/audit` — recent `llm-*` audit entries
+## 静态加密(LLM apiKey)
 
-All root operations go through `/usr/local/libexec/envctrl-shim` which:
-- Refuses to execute unless invoked via sudo (EUID 0)
-- Has a strict whitelist of 11 subcommands
-- Does not parse `argv` shell-style — uses JSON-RPC over stdio
-
-## LLM agent (optional)
-
-The Pi Agent supports an optional LLM layer (L1 chat / L2 diagnose / L3 ReAct) using `@anthropic-ai/sdk`. minimax works as a drop-in via `ANTHROPIC_BASE_URL`. To enable:
+Provider 的 `apiKey` 用 **AES-256-GCM**(带关联数据的认证加密)加密后存到 `llm_provider` 表。key 从 `ENVCTRL_ENCRYPTION_KEY` 读取:
 
 ```bash
-# Option A: Anthropic direct
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# Option B: minimax
-export ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
-export ANTHROPIC_API_KEY=${YOUR_MINIMAX_KEY}
-export ENVCTRL_LLM_MODEL=MiniMax-M2.7-highspeed
-
-# Restart envctrl
-sudo systemctl restart envctrl
-```
-
-Open the **pi-agent** tab in the web UI. The status indicator (● / ○) shows whether the LLM is configured. All LLM-initiated actions are recorded in the `audit` table with `actor='llm'`.
-
-**Provider management (cc-switch style):** the **config** tab lists all stored providers. 3 built-in presets (minimax, DeepSeek, Anthropic) are seeded on first boot. Pick one, fill in the apiKey, hit Test, then Activate. Active provider can be switched hot — no restart.
-
-**Safety**: high-risk actions (config apply, udev install, systemctl restart, reboot) require explicit user confirmation via an amber dialog in the web UI. Low-risk actions (toggling a relay/GPIO) auto-execute.
-
-## Encryption at rest (LLM apiKeys)
-
-Provider `apiKey` values are stored encrypted in the `llm_provider` table using **AES-256-GCM** (authenticated encryption with associated data). The key is read from `ENVCTRL_ENCRYPTION_KEY`:
-
-```bash
-# Generate a key once
+# 生成 key
 openssl rand -hex 32
-# e.g. a1b2c3d4e5f6... (64 hex chars = 32 bytes)
+# e.g. a1b2c3d4e5f6... (64 个十六进制字符 = 32 字节)
 
-# Persist it
+# 持久化
 echo "ENVCTRL_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> /etc/envctrl/env
 sudo systemctl restart envctrl
 ```
 
-Accepted formats: 64 hex chars, 32 raw bytes, or any string (hashed via SHA-256 to 32 bytes — deterministic, less secure).
+接受的格式:64 个十六进制字符、32 字节裸数据,或任意字符串(经 SHA-256 哈希成 32 字节 — 可复现但安全性较低)。
 
-**Dev fallback**: if `ENVCTRL_ENCRYPTION_KEY` is unset, envctrl derives a deterministic key from the hostname and emits a one-time console warning. **Do not use in production.** Existing plaintext keys (from older versions) are automatically re-encrypted on the next save.
+**开发回退**:如果 `ENVCTRL_ENCRYPTION_KEY` 未设,envctrl 会基于 hostname 推导一个固定 key,并打印一次性 console warning。**生产环境请勿使用。** 旧版存留的明文 key 会在下次保存时自动重新加密。
 
-### Rotating the encryption key
+### 轮换加密 key
 
-The web **Admin** page (`/admin` tab) generates the exact SSH command you need. Pasting a new key there will produce something like:
+Web **Admin** 页面(`/admin` tab)会生成你要执行的精确 SSH 命令。粘贴新 key 进去会得到类似:
 
 ```bash
 sudo -E /usr/local/bin/envctrl-rotate-encryption-key
-# Equivalent to running:
+# 等价于:
 ENVCTRL_OLD_KEY='<old>' \
 ENVCTRL_NEW_KEY='<new>' \
 /opt/envctrl/node_modules/.bin/tsx /opt/envctrl/scripts/rotateKey.ts
 ```
 
-The script re-encrypts every `llm_provider.api_key` row in a single transaction — any decrypt/encrypt failure rolls back the database. After it succeeds, update `/etc/envctrl/env` so `ENVCTRL_ENCRYPTION_KEY=<new>` and `sudo systemctl restart envctrl`.
+这个脚本在单一事务内重新加密所有 `llm_provider.api_key` 行 — 任何 decrypt/encrypt 失败都回滚整个数据库。成功后,更新 `/etc/envctrl/env` 把 `ENVCTRL_ENCRYPTION_KEY=<new>`,然后 `sudo systemctl restart envctrl`。
 
-The web server never executes rotation itself: re-encrypting requires writing to `/etc/envctrl/env`, which only root can do, and we don't want a web exploit to be able to rotate keys. The Admin page is a *command generator* — copy/paste over SSH.
+**web 服务自身从不执行轮换** — 重新加密需要写 `/etc/envctrl/env`,只有 root 能做,我们不想让 web 漏洞有能力轮换 key。Admin 页面是一个**命令生成器** — 通过 SSH 复制粘贴运行。
 
-You can also run the script directly:
+也可以直接运行脚本:
 
 ```bash
-# Manually, with prompts:
+# 手动,带提示:
 sudo -E /usr/local/bin/envctrl-rotate-encryption-key
 
-# Or non-interactively (CI / scripted rotations):
+# 或者非交互式(CI / 脚本化轮换):
 ENVCTRL_OLD_KEY="$(grep ^ENVCTRL_ENCRYPTION_KEY= /etc/envctrl/env | cut -d= -f2)" \
 ENVCTRL_NEW_KEY="$(openssl rand -hex 32)" \
 sudo -E /usr/local/bin/envctrl-rotate-encryption-key
 ```
 
-After rotation, the audit table has `key.rotation.start` / `.completed` / `.failed` rows you can query for compliance.
+轮换后,audit 表会写入 `key.rotation.start` / `.completed` / `.failed` 行,供合规查询。
 
-## Backups
+## 备份
 
-Daily hot-backups of the SQLite database + config run via systemd timer (`envctrl-backup.timer`, 03:00 by default). Files land in `/var/backups/envctrl/` with 7-day retention. `install.sh` enables the timer automatically.
+每日 SQLite 数据库 + config 的热备份通过 systemd timer 运行(`envctrl-backup.timer`,默认 03:00)。文件落地在 `/var/backups/envctrl/`,7 天保留期。`install.sh` 自动启用 timer。
 
-Manual operations:
+手动操作:
 
 ```bash
-# Create one now
+# 立即创建一份
 sudo -u envctrl /usr/local/bin/envctrl-backup
-# or via the web Admin → Backups → "Create now" button
+# 或通过 web Admin → Backups → "Create now" 按钮
 
-# Restore (stops the service, replaces data, restarts)
+# 恢复(停止服务,替换数据,启动)
 sudo /usr/local/bin/envctrl-restore /var/backups/envctrl/envctrl-20260101T030000Z.db
-# optional second arg: a config backup
+# 可选第二参数:config 备份
 ```
 
-The web **Admin → Backups** card lists, downloads, and generates the restore command — same one-way SSH pattern as rotation, so the web process never modifies the live database directly.
+Web **Admin → Backups** 卡片列出、下载,并生成恢复命令 — 跟轮换一样的"单向 SSH"模式,web 进程永不直接修改 live 数据库。
 
-## Security notes
+## 安全说明
 
-## Security notes
+- 告警条件用自写的 token 白名单解析器求值(无 `eval`、无 JS 执行)。允许的 token:数字、单/双引号字符串、`value`、`true`、`false`、比较运算符、`&&` `||` `!` 和括号。
+- Elysia 进程以非 root 用户运行;root 只通过权限 shim 临时获取,仅用于特定的 allowlisted 子命令。
+- `serialport` 用 `lock: true` 打开每个 `/dev/tty*`(Linux flock),防止与其他进程冲突。
+- Admin API 的 rotation/restore 端点**只生成** SSH 命令,永不执行 — web 进程无能力修改 `/etc/envctrl/env` 或停止服务。
+- `web/hooks/usePostSSE.ts` 显式管理 `AbortController`,确保组件卸载时关闭 SSE 读取器。
 
-- Alarm conditions are evaluated by a hand-rolled token-whitelist parser (no `eval`, no JS execution). Allowed tokens: numbers, single/double-quoted strings, `value`, `true`, `false`, comparison operators, `&&` `||` `!` and parentheses.
-- The Elysia process runs as a non-root user; root is only acquired transiently via the privilege shim for specific allowlisted subcommands.
-- `serialport` opens each `/dev/tty*` with `lock: true` (Linux flock), preventing collisions with other processes.
+## 开发
 
-## License
+```bash
+# Type-check(后端)
+bunx tsc --noEmit -p tsconfig.json
+# Type-check(scripts/)
+bunx tsc --noEmit -p tsconfig.scripts.json
 
-Internal project.
+# 测试
+bunx vitest run
+bunx vitest run tests/storage/secrets.test.ts   # 单个文件
+
+# Web
+bun run dev:web                                  # Vite dev server
+bun run build:web                                # 产出 web/dist/
+```
+
+CI 跑在 GitHub Actions(`.github/workflows/test.yml`):push 到 main 或 PR 触发;node 24 + bun,rebuild native,tsc,vitest,vite build。
+
+## 许可证
+
+MIT — 详见 [LICENSE](./LICENSE)。
