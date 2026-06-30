@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest something new for envctrl.
+labels: ['enhancement']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the operational pain point. "I want to do X but currently I have to Y."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would the ideal UX look like? Sketch the API, UI, or config change.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you think about, and why this one?
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / screenshots

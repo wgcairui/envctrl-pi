@@ -1,0 +1,57 @@
+name: Bug report
+description: Report something that's broken or behaving unexpectedly.
+labels: ['bug']
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Server / API
+        - Web UI
+        - LLM agent
+        - Driver / hardware
+        - Backup / restore
+        - Key rotation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Include the actual behaviour, ideally with logs or a screenshot.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: |
+        - envctrl version / commit
+        - Node version (`node -v`)
+        - Pi model + OS (`cat /etc/os-release`)
+        - LLM provider (Anthropic / DeepSeek / minimax)
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      placeholder: |
+        journalctl -u envctrl --since "5 min ago" --no-pager
+        or a curl + response snippet for API bugs.

@@ -1,0 +1,51 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same branch on new pushes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: vitest + tsc + web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'bun'
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install system deps (sqlite + python shim)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 build-essential
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck (server)
+        run: bunx tsc --noEmit -p tsconfig.json
+
+      - name: Typecheck (scripts)
+        run: bunx tsc --noEmit -p tsconfig.scripts.json
+
+      - name: Unit tests
+        run: bunx vitest run --reporter=verbose
+
+      - name: Web build
+        run: bun run build:web

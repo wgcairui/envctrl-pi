@@ -1,0 +1,20 @@
+# Default: no owner required (any contributor can review).
+*       @wgcairui
+
+# Sensitive paths — require explicit owner review.
+# Encryption at rest, key rotation, backup scripts: security-critical.
+/src/storage/secrets.ts         @wgcairui
+/scripts/rotateKey.ts            @wgcairui
+/deploy/rotate-encryption-key.sh @wgcairui
+/deploy/backup.sh                @wgcairui
+/deploy/restore.sh               @wgcairui
+/deploy/install.sh               @wgcairui
+
+# LLM agent — touches the Anthropic API and executes tools on the Pi.
+/src/pi/                        @wgcairui
+/src/api/routes/piAgent.ts      @wgcairui
+/src/api/routes/admin.ts        @wgcairui
+
+# Frontend admin UI (touches the above).
+/web/src/pages/AdminPage.tsx    @wgcairui
+/web/src/pages/PiAgentPage.tsx  @wgcairui
