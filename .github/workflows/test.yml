@@ -37,6 +37,13 @@ jobs:
       - name: Install deps
         run: bun install --frozen-lockfile
 
+      # better-sqlite3 / serialport / onoff / epoll ship pre-built .node
+      # binaries for the platform that produced the lockfile (e.g. macOS
+      # arm64 from a developer machine). Re-compile them for the CI runner
+      # so the .node file matches the running Node ABI on Linux x64.
+      - name: Rebuild native modules for Linux x64
+        run: npm rebuild better-sqlite3 @serialport/bindings-cpp serialport onoff
+
       - name: Typecheck (server)
         run: bunx tsc --noEmit -p tsconfig.json
 
