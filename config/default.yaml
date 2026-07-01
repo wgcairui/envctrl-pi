@@ -29,6 +29,7 @@ devices:
     kind: modbus-rtu
     bus: bus_rs485_indoor
     pollMs: 5000
+    position: { x: 50, y: 45, room: living }
     driverOptions:
       slaveId: 1
       registerType: input
@@ -42,12 +43,14 @@ devices:
         unit: ppm
         scale: { gain: 1, offset: 0 }
         alarmHi: 1000
+        display: { category: co2, icon: wind, featured: true }
 
   - id: outdoor_relay
     name: 户外继电器
     kind: modbus-rtu
     bus: bus_rs485_outdoor
     pollMs: 1000
+    position: { x: 50, y: 50, room: outdoor }
     driverOptions:
       slaveId: 2
       registerType: coil
@@ -56,16 +59,19 @@ devices:
         name: 灯1
         type: bool
         access: rw
+        display: { category: relay }
       - id: ch2
         name: 灯2
         type: bool
         access: rw
+        display: { category: relay }
 
   - id: modbus_tcp_meter
     name: 电表
     kind: modbus-tcp
     bus: tcp:192.168.1.100:502
     pollMs: 5000
+    position: { x: 75, y: 65, room: kitchen }
     driverOptions:
       slaveId: 1
       registerType: input
@@ -78,17 +84,20 @@ devices:
         access: ro
         unit: V
         scale: { gain: 0.1, offset: 0 }
+        display: { category: voltage, icon: zap, featured: true }
       - id: current
         name: 电流
         type: number
         access: ro
         unit: A
         scale: { gain: 0.01, offset: 0 }
+        display: { category: current, icon: zap }
 
   - id: led_status
     name: 状态灯
     kind: gpio-out
     bus: gpio
+    position: { x: 30, y: 70, room: living }
     driverOptions:
       pin: 17
     points:
@@ -96,11 +105,13 @@ devices:
         name: 状态灯
         type: bool
         access: rw
+        display: { category: custom }
 
   - id: door_sensor
     name: 门磁
     kind: gpio-in
     bus: gpio
+    position: { x: 80, y: 30, room: bedroom }
     driverOptions:
       pin: 27
       edge: both
@@ -110,6 +121,7 @@ devices:
         name: 门开
         type: bool
         access: ro
+        display: { category: door, icon: lock }
 
 pi:
   configTxt: /boot/firmware/config.txt

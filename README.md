@@ -12,6 +12,35 @@
 
 完整设计见 `docs/superpowers/specs/2026-06-28-envctrl-design.md`。
 
+## 设计系统(Glass Soft)
+
+Web UI 基于自家 **Glass Soft** 设计系统:
+
+- 玻璃面板(`backdrop-blur` + 1px 白边 + inset 辉光)、aurora 渐变背景
+- 数字一律 JetBrains Mono + tabular-nums
+- 状态 = 颜色 + icon + 文字三重信号
+- `prefers-reduced-motion` 全套 fallback
+
+详细规范:
+
+| 文档 | 用途 |
+|---|---|
+| `workspace/glass-soft-spec.md` | 设计令牌、组件 API、状态语义 |
+| `workspace/glass-soft-interactions.md` | 动效规则、可 copy 的 CSS/JS |
+| `workspace/ui-design-c.html` | 8 个页面的 mockup |
+| `workspace/glass-soft-interactions.html` | 13 节可交互 demo |
+
+代码位置:
+
+- `web/src/design/tokens.css` — CSS 变量(背景 / 玻璃 / 语义 / 图表 / 间距 / 圆角 / 阴影 / 动效)
+- `web/src/design/animations.css` — keyframes + reduced-motion fallback
+- `web/src/design/Aurora.tsx` — 背景层(aurora 渐变 + 浮动光斑)
+- `web/src/design/globals.css` — 设计系统入口
+- `web/tailwind.config.js` — Tailwind 主题扩展(镜像 tokens)
+- `web/src/components/ui/` — 17 个通用组件(Card / Button / Pill / Toggle / Slider / Tabs / Toast / Tooltip / Modal / Skeleton / Pulse / EmptyState / ErrorState / Metric / Icon / Chip)
+
+**给 agent 看**: `AGENTS.md` 描述项目结构 + 设计系统 + 测试规范 + 开发纪律。
+
 ## 快速开始(开发)
 
 ```bash
@@ -40,10 +69,15 @@ node dist/index.js  # 在 :3000 同时提供 API 和静态 web
 ## 目录结构
 
 - `src/` — 后端(Elysia + drivers + core + Pi agent)
-- `web/` — 前端(React + Vite + Tailwind)
+- `web/` — 前端(React + Vite + Tailwind + design system)
+  - `web/src/design/` — ★ Glass Soft 设计系统
+  - `web/src/components/ui/` — ★ 通用 UI 组件库
+  - `web/tests/` — ★ vitest 前端组件测试(jsdom 环境)
 - `scripts/pi-shim/` — Python 特权 shim(部署在 Pi 上)
 - `config/default.yaml` — 运行时配置
 - `deploy/` — systemd unit + 安装脚本
+- `workspace/` — 设计稿 / 交互 demo / 设计规范
+- `AGENTS.md` — ★ 给 AI agent 的项目级 context
 
 ## 运行时
 
@@ -188,18 +222,34 @@ Web **Admin → Backups** 卡片列出、下载,并生成恢复命令 — 跟轮
 
 ```bash
 # Type-check(后端)
-bunx tsc --noEmit -p tsconfig.json
-# Type-check(scripts/)
-bunx tsc --noEmit -p tsconfig.scripts.json
+bun run typecheck
 
-# 测试
-bunx vitest run
-bunx vitest run tests/storage/secrets.test.ts   # 单个文件
+# 测试(后端 + 前端组件,vitest run)
+bun run test
+bun run test:watch
+bunx vitest run tests/storage/secrets.test.ts   # 单文件
+bunx vitest run web/tests/components/Button.test.tsx  # 单 UI 组件
+bunx vitest run web/tests/pages/OverviewPage.test.tsx  # 单页面
 
 # Web
 bun run dev:web                                  # Vite dev server
 bun run build:web                                # 产出 web/dist/
 ```
+
+### 加新 UI 组件
+
+1. 在 `workspace/glass-soft-spec.md` §4 找类似的现有组件,**优先复用**
+2. 写到 `web/src/components/ui/<Name>.tsx`,在 `index.ts` barrel 里导出
+3. 数字 / 状态用 `Metric` / `Pill`,面板用 `Card`,**禁止**用 Tailwind 默认调色板
+4. 加 `web/tests/components/<Name>.test.tsx`,覆盖渲染 / 交互 / 可访问性
+5. 如果用新 token,加到 `web/src/design/tokens.css` + `tailwind.config.js` + spec
+
+### 加新页面
+
+1. 写 `web/src/pages/<Name>Page.tsx`,接入 `useQuery(['<key>'])` 拉后端数据
+2. 用 `Card` / `Metric` / `Pill` / `EmptyState` / `ErrorState` / `Skeleton` 拼版面
+3. 在 `App.tsx` nav 加 tab 路由
+4. 写 `web/tests/pages/<Name>Page.test.tsx`(mock api)
 
 CI 跑在 GitHub Actions(`.github/workflows/test.yml`):push 到 main 或 PR 触发;node 24 + bun,rebuild native,tsc,vitest,vite build。
 

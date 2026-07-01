@@ -41,6 +41,10 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10",
+    "@testing-library/jest-dom": "^6",
+    "@testing-library/react": "^16",
+    "@testing-library/user-event": "^14",
     "@types/better-sqlite3": "^7.6.12",
     "@types/bun": "^1.1.0",
     "@types/node": "^22.10.0",
@@ -50,6 +54,7 @@
     "@vitejs/plugin-react": "^4.3.0",
     "@vitest/runner": "^4.1.9",
     "autoprefixer": "^10.4.20",
+    "jsdom": "^25",
     "postcss": "^8.4.49",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

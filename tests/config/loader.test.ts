@@ -56,4 +56,60 @@ pi: { configTxt: /a, udevRulesDir: /b, shimPath: /c, services: [] }
       ])
     ).toThrow()
   })
+
+  it('parses point.display for UI category hints', () => {
+    const cfg = loadConfig('./config/default.yaml')
+    const co2 = cfg.devices.find((d) => d.id === 'indoor_co2')!
+    const co2point = co2.points.find((p) => p.id === 'co2_ppm')!
+    expect(co2point.display?.category).toBe('co2')
+    expect(co2point.display?.icon).toBe('wind')
+    expect(co2point.display?.featured).toBe(true)
+  })
+
+  it('parses device.position for RoomMap layout', () => {
+    const cfg = loadConfig('./config/default.yaml')
+    const indoor = cfg.devices.find((d) => d.id === 'indoor_co2')!
+    expect(indoor.position).toBeDefined()
+    expect(indoor.position?.x).toBe(50)
+    expect(indoor.position?.y).toBe(45)
+    expect(indoor.position?.room).toBe('living')
+  })
+
+  it('accepts device without display/position (back-compat)', () => {
+    const yaml = `
+server: { host: 0.0.0.0, port: 3000 }
+storage: { path: ./data/db.sqlite }
+serial: { ports: [] }
+devices:
+  - id: legacy
+    kind: gpio-in
+    bus: gpio
+    driverOptions: { pin: 17 }
+    points:
+      - { id: s, name: state, type: bool, access: ro }
+pi: { configTxt: /a, udevRulesDir: /b, shimPath: /c, services: [] }
+`
+    const cfg = parseConfigString(yaml)
+    const dev = cfg.devices[0]!
+    expect(dev.position).toBeUndefined()
+    expect(dev.points[0]!.display).toBeUndefined()
+  })
+
+  it('rejects invalid point.display.category', () => {
+    expect(() =>
+      parseConfigString(`
+server: { host: 0.0.0.0, port: 3000 }
+storage: { path: ./data/db.sqlite }
+serial: { ports: [] }
+devices:
+  - id: x
+    kind: gpio-in
+    bus: gpio
+    driverOptions: {}
+    points:
+      - { id: s, name: state, type: number, access: ro, display: { category: invalid } }
+pi: { configTxt: /a, udevRulesDir: /b, shimPath: /c, services: [] }
+`)
+    ).toThrow(/category|Invalid enum value/)
+  })
 })
