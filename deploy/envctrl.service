@@ -1,15 +1,25 @@
 [Unit]
 Description=envctrl - Raspberry Pi environment control
-After=network-online.target pigpiod.service
+After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=envctrl
-Group=dialout,gpio
+# systemd does NOT accept comma-separated Group=. The right way to add
+# extra groups is Group= (primary) + SupplementaryGroups= (rest). Using
+# "Group=dialout,gpio" silently made systemd drop the ExecStart, leading
+# to "Failed at step GROUP spawning /usr/bin/node: No such file or directory".
+Group=dialout
+SupplementaryGroups=gpio
 WorkingDirectory=/opt/envctrl
 ExecStartPre=/bin/bash -c 'test -f /usr/local/libexec/envctrl-shim || echo "WARNING: envctrl-shim not installed, /api/pi/* endpoints will fail" >&2'
-ExecStart=/usr/bin/node --enable-source-maps /opt/envctrl/dist/index.js
+# /usr/local/bin/node (not /usr/bin/node) — matches package.json engines
+# (Node 22+/24+). The prebuilt native modules (better-sqlite3, serialport,
+# onoff) target a specific ABI; apt's nodejs is Node 20 (ABI 115) which
+# ERR_DLOPEN_FAILEDs. /usr/local/bin/node must be installed separately
+# (see README / scripts/deploy.sh).
+ExecStart=/usr/local/bin/node --enable-source-maps /opt/envctrl/dist/index.js
 Restart=on-failure
 RestartSec=5
 EnvironmentFile=-/etc/envctrl/env
