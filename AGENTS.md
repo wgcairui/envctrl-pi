@@ -194,15 +194,40 @@ bunx vitest run tests/storage/secrets.test.ts
 
 ## 8 · 部署
 
-部署机: `cc@uart.ladishb.com`(见 memory `server-ssh`)。
+envctrl 跑在 Raspberry Pi 上,systemd unit 名 `envctrl.service`。
+
+**dev 机一条命令部署**(从 repo 根目录):
 
 ```bash
-ssh cc 'cd /home/cc/Web/midwayuartserver && git pull && npm run build:docker \
-  && cd /home/cc/Web/docker && docker compose up -d --force-recreate --no-build midwayuartserver'
+scripts/deploy.sh                       # 默认 envctrl@envctrl-pi.local
+scripts/deploy.sh pi@192.168.1.42       # 自定义 host
 ```
 
-install.sh 自动做: 创建 envctrl 用户、加入 dialout/gpio、装 Python shim、systemd unit、
-备份 timer(每天 03:00)、`/var/backups/envctrl/`(0750,envctrl:envctrl 拥有)。
+内部三步:rsync 源码(过滤 node_modules / dist / tests / workspace) →
+在 Pi 上 `bun install --frozen-lockfile` + `bun run build`(native 模块必须
+在目标架构编译,不能从外机 sync) → `sudo deploy/install.sh` 装 systemd unit。
+
+**Pi 端要求**(由 install.sh 之前手动准备):
+
+- `/usr/local/bin/node` 是 Node 22+(推荐 24,匹配 `engines`),**不要**装
+  apt 的 `nodejs`(Node 20 / ABI 115 跟预编译的 better-sqlite3、serialport、
+  onoff 不兼容,会 `ERR_DLOPEN_FAILED`)。
+- `bun` 在 PATH 上(否则 deploy.sh 自动 fallback 到 `npm ci --omit=dev`)。
+- 部署用户在 Pi 上有 passwordless sudo。
+
+**`deploy/install.sh` 自动做**: 装 `python3`(`pigpio` 可选,缺包不报错,
+因为 shim 走 stdlib、Node 走 libgpiod)、创建 `envctrl` 用户(加入 `dialout`
++ `gpio`)、装 Python 权限 shim + sudoers 规则、装 systemd unit、装备份 /
+rotate-encryption-key 脚本到 `/usr/local/bin/`、启用 `envctrl-backup.timer`
+(每天 03:00 备份到 `/var/backups/envctrl/`,0750,`envctrl:envctrl` 拥有)。
+
+**踩过的坑**(已写进脚本注释):
+
+- systemd `Group=dialout,gpio` 逗号语法不认 → 拆成 `Group=dialout` +
+  `SupplementaryGroups=gpio`。
+- Pi 端 Node 用 `/usr/local/bin/node` 而非 `/usr/bin/node`。
+- native 模块必须在 Pi 上现场 `bun install`,**不要**从 x86_64 dev 机
+  rsync `node_modules`。
 
 ---
 
