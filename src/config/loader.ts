@@ -2,6 +2,48 @@ import { readFileSync } from 'node:fs'
 import { parse } from 'yaml'
 import { z } from 'zod'
 
+const PointCategorySchema = z.enum([
+  'temperature',
+  'humidity',
+  'co2',
+  'pm25',
+  'voc',
+  'light',
+  'iaq',
+  'voltage',
+  'current',
+  'power',
+  'pressure',
+  'flow',
+  'cpu_temp',
+  'fan',
+  'door',
+  'motion',
+  'relay',
+  'custom',
+])
+
+const PointDisplaySchema = z
+  .object({
+    category: PointCategorySchema,
+    icon: z
+      .enum([
+        'thermometer',
+        'droplet',
+        'wind',
+        'sun',
+        'cpu',
+        'sparkles',
+        'zap',
+        'lock',
+        'home',
+        'activity',
+      ])
+      .optional(),
+    featured: z.boolean().optional(),
+  })
+  .optional()
+
 const PointSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -12,7 +54,10 @@ const PointSchema = z.object({
   enumValues: z.record(z.string(), z.string()).optional(),
   alarmHi: z.number().optional(),
   alarmLo: z.number().optional(),
+  display: PointDisplaySchema,
 })
+
+const RoomSchema = z.enum(['living', 'bedroom', 'kitchen', 'office', 'outdoor']).optional()
 
 const DriverConfigSchema = z.object({
   id: z.string(),
@@ -22,6 +67,11 @@ const DriverConfigSchema = z.object({
   pollMs: z.number().int().positive().optional(),
   points: z.array(PointSchema),
   driverOptions: z.record(z.string(), z.unknown()),
+  /**
+   * Optional device location for the Overview RoomMap.
+   * Coordinates are normalized 0-100 (% of room width / height).
+   */
+  position: z.object({ x: z.number(), y: z.number(), room: RoomSchema }).optional(),
 })
 
 const AlarmActionSchema = z.union([

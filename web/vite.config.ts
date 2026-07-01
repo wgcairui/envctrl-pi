@@ -6,7 +6,10 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      // Match tsconfig path mapping so `@backend/*` resolves in dev + build
       '@backend': path.resolve(__dirname, '../src'),
+      // Existing alias preserved for back-compat
+      // (old code uses '../../../src/api/server.js' relative paths)
     },
   },
   server: {

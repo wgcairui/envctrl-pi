@@ -1,0 +1,101 @@
+/**
+ * envctrl · Glass Soft — Design Tokens (CSS variables)
+ *
+ * Canonical source for all visual constants. Mirror these in tailwind.config.js
+ * so utility classes (e.g. `bg-glass-1`, `text-ok`) reference the same hex.
+ *
+ * Full rationale: workspace/glass-soft-spec.md §2
+ * Don't edit colors here without updating the spec — they're referenced by name.
+ */
+
+:root {
+  /* ─── Background (aurora gradient stops) ──────────────────── */
+  --bg-1: #1a0b2e;
+  --bg-2: #2d1155;
+  --bg-3: #5b1769;
+  --bg-4: #831843;
+  --bg-5: #be185d;
+
+  /* ─── Glass surfaces ──────────────────────────────────────── */
+  --glass-1: rgba(255, 255, 255, 0.08);
+  --glass-2: rgba(255, 255, 255, 0.12);
+  --glass-3: rgba(255, 255, 255, 0.18);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-border-strong: rgba(255, 255, 255, 0.28);
+
+  /* ─── Ink (text) ──────────────────────────────────────────── */
+  --ink: #ffffff;
+  --ink-2: rgba(255, 255, 255, 0.75);
+  --ink-3: rgba(255, 255, 255, 0.55);
+  --ink-4: rgba(255, 255, 255, 0.35);
+  --ink-5: rgba(255, 255, 255, 0.20);
+
+  /* ─── Semantic colors + glow ──────────────────────────────── */
+  --ok: #6ee7b7;
+  --ok-glow: rgba(110, 231, 183, 0.4);
+  --ok-tint: rgba(110, 231, 183, 0.10);
+  --ok-border: rgba(110, 231, 183, 0.30);
+
+  --warn: #fcd34d;
+  --warn-glow: rgba(252, 211, 77, 0.4);
+  --warn-tint: rgba(252, 211, 77, 0.10);
+  --warn-border: rgba(252, 211, 77, 0.30);
+
+  --crit: #fda4af;
+  --crit-glow: rgba(253, 164, 175, 0.45);
+  --crit-tint: rgba(253, 164, 175, 0.10);
+  --crit-border: rgba(253, 164, 175, 0.30);
+
+  --info: #93c5fd;
+  --info-glow: rgba(147, 197, 253, 0.4);
+  --info-tint: rgba(147, 197, 253, 0.10);
+  --info-border: rgba(147, 197, 253, 0.30);
+
+  --accent: #a5b4fc;
+  --accent-glow: rgba(165, 180, 252, 0.4);
+  --accent-tint: rgba(165, 180, 252, 0.10);
+  --accent-border: rgba(165, 180, 252, 0.30);
+
+  --hot: #f472b6;
+  --hot-glow: rgba(244, 114, 182, 0.4);
+  --hot-tint: rgba(244, 114, 182, 0.10);
+  --hot-border: rgba(244, 114, 182, 0.30);
+
+  --cyan: #67e8f9;
+  --cyan-glow: rgba(103, 232, 249, 0.4);
+
+  /* ─── Chart palette (≤6 series per chart) ─────────────────── */
+  --chart-1: #a78bfa;
+  --chart-2: #67e8f9;
+  --chart-3: #fcd34d;
+  --chart-4: #6ee7b7;
+  --chart-5: #f472b6;
+  --chart-6: #93c5fd;
+  --chart-threshold: #fda4af;
+
+  /* ─── Type ────────────────────────────────────────────────── */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+
+  /* ─── Radii ───────────────────────────────────────────────── */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* ─── Shadows ─────────────────────────────────────────────── */
+  --shadow-1: 0 4px 16px rgba(0, 0, 0, 0.18);
+  --shadow-2: 0 8px 32px rgba(0, 0, 0, 0.25);
+  --shadow-3: 0 16px 48px rgba(0, 0, 0, 0.35);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  /* ─── Motion ──────────────────────────────────────────────── */
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --dur-breath: 2500ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}

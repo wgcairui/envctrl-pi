@@ -1,5 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-html, body, #root { height: 100%; }
+/**
+ * Entry stylesheet — re-exports the design system globals.
+ *
+ * Order matters: tokens + animations before tailwind, so Tailwind's
+ * utility classes can reference the CSS vars we define.
+ *
+ * Tailwind config (tailwind.config.js) mirrors these tokens so that
+ * utility classes like `bg-ok`, `text-ink-2`, `rounded-lg` resolve to
+ * the same hex values.
+ */
+@import './design/globals.css';

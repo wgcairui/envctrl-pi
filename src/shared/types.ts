@@ -3,6 +3,52 @@
 export type PointType = 'number' | 'bool' | 'enum'
 export type Access = 'ro' | 'wo' | 'rw'
 
+/**
+ * Display category for a point — drives UI rendering decisions.
+ *
+ * The web UI uses this to pick icons, units, ordering in the Overview
+ * LiveMetric strip, and chart palette. When omitted, the UI falls back
+ * to a heuristic on `name` / `unit`.
+ */
+export type PointCategory =
+  | 'temperature'
+  | 'humidity'
+  | 'co2'
+  | 'pm25'
+  | 'voc'
+  | 'light'
+  | 'iaq'
+  | 'voltage'
+  | 'current'
+  | 'power'
+  | 'pressure'
+  | 'flow'
+  | 'cpu_temp'
+  | 'fan'
+  | 'door'
+  | 'motion'
+  | 'relay'
+  | 'custom'
+
+export interface PointDisplay {
+  /** Category used by UI to pick icon + ordering in LiveMetric strip. */
+  category: PointCategory
+  /** Optional icon override; defaults are picked from category. */
+  icon?:
+    | 'thermometer'
+    | 'droplet'
+    | 'wind'
+    | 'sun'
+    | 'cpu'
+    | 'sparkles'
+    | 'zap'
+    | 'lock'
+    | 'home'
+    | 'activity'
+  /** Whether to feature this point in the Overview hero / LiveMetric strip. */
+  featured?: boolean
+}
+
 export interface Point {
   id: string
   name: string
@@ -15,6 +61,8 @@ export interface Point {
   enumValues?: Record<string, string>
   alarmHi?: number
   alarmLo?: number
+  /** Optional UI display hints — see PointDisplay. */
+  display?: PointDisplay
 }
 
 export type DeviceKind =
@@ -52,6 +100,11 @@ export interface Device {
   bus: string
   config: DriverConfig
   enabled: boolean
+  /**
+   * Optional location for the Overview RoomMap.
+   * Coordinates are normalized 0–100 (% of room width / height).
+   */
+  position?: { x: number; y: number; room?: 'living' | 'bedroom' | 'kitchen' | 'office' | 'outdoor' }
 }
 
 export type AlarmSeverity = 'info' | 'warning' | 'error' | 'critical'

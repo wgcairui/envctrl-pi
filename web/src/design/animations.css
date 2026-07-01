@@ -1,0 +1,117 @@
+/**
+ * envctrl · Glass Soft — Animation Keyframes
+ *
+ * All named keyframes for the design system. Each rule references CSS vars
+ * from tokens.css so duration/easing is consistent.
+ *
+ * Reduced-motion fallback is appended at the bottom and overrides everything.
+ */
+
+/* ─── Aurora orb drift ──────────────────────────────────────── */
+@keyframes orb-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40vw, -20vh) scale(1.1); }
+  66% { transform: translate(-30vw, 30vh) scale(0.9); }
+}
+@keyframes orb-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-25vw, 35vh) scale(0.85); }
+  66% { transform: translate(30vw, -25vh) scale(1.15); }
+}
+@keyframes orb-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20vw, 25vh) scale(1.05); }
+}
+
+/* ─── Pulse (status dots) ───────────────────────────────────── */
+@keyframes pulse-breath {
+  0%, 100% { box-shadow: 0 0 6px var(--ok-glow); }
+  50% { box-shadow: 0 0 12px var(--ok-glow), 0 0 20px rgba(110, 231, 183, 0.2); }
+}
+@keyframes pulse-warn {
+  0%, 100% { box-shadow: 0 0 6px var(--warn-glow); }
+  50% { box-shadow: 0 0 14px var(--warn-glow); }
+}
+@keyframes pulse-crit {
+  0%, 100% { box-shadow: 0 0 6px var(--crit-glow); }
+  50% { box-shadow: 0 0 16px var(--crit-glow); }
+}
+
+/* ─── Room map device ripple ────────────────────────────────── */
+@keyframes ripple {
+  0% { r: 6; opacity: 0.6; }
+  100% { r: 14; opacity: 0; }
+}
+
+/* ─── LED on (toggle flash) ─────────────────────────────────── */
+@keyframes led-on {
+  0% { box-shadow: 0 0 0 0 var(--ok-glow); }
+  100% { box-shadow: 0 0 0 8px rgba(110, 231, 183, 0); }
+}
+
+/* ─── Pill state flash ──────────────────────────────────────── */
+@keyframes pill-flash-ok {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 var(--ok-glow); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 8px transparent; }
+  100% { transform: scale(1); }
+}
+
+/* ─── Cell flash (data update) ──────────────────────────────── */
+@keyframes cell-flash {
+  0% { background: rgba(167, 139, 250, 0.18); }
+  100% { background: transparent; }
+}
+
+/* ─── Skeleton shimmer ──────────────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Toast ─────────────────────────────────────────────────── */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to { opacity: 0; transform: translateX(20px) scale(0.95); }
+}
+
+/* ─── Modal ─────────────────────────────────────────────────── */
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ─── Page transition ───────────────────────────────────────── */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Sparkline entrance ────────────────────────────────────── */
+@keyframes spark-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Reduced motion: kill animations, keep transitions ──────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .orb,
+  .pulse,
+  .ripple {
+    display: none;
+  }
+}

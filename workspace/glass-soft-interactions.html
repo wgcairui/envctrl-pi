@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>envctrl · Glass Soft — 交互效果 Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-1: #1a0b2e; --bg-2: #2d1155; --bg-3: #5b1769; --bg-4: #831843;
+    --glass-1: rgba(255,255,255,0.08); --glass-2: rgba(255,255,255,0.12); --glass-3: rgba(255,255,255,0.18);
+    --glass-border: rgba(255,255,255,0.18); --glass-border-strong: rgba(255,255,255,0.28);
+    --ink: #fff; --ink-2: rgba(255,255,255,0.75); --ink-3: rgba(255,255,255,0.55); --ink-4: rgba(255,255,255,0.35); --ink-5: rgba(255,255,255,0.20);
+    --ok: #6ee7b7; --ok-glow: rgba(110,231,183,0.4);
+    --warn: #fcd34d; --warn-glow: rgba(252,211,77,0.4);
+    --crit: #fda4af; --crit-glow: rgba(253,164,175,0.45);
+    --info: #93c5fd; --info-glow: rgba(147,197,253,0.4);
+    --accent: #a5b4fc; --accent-glow: rgba(165,180,252,0.4);
+    --hot: #f472b6; --cyan: #67e8f9;
+    --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-xl: 24px; --r-pill: 999px;
+    --shadow-1: 0 4px 16px rgba(0,0,0,0.18);
+    --shadow-2: 0 8px 32px rgba(0,0,0,0.25);
+    --shadow-3: 0 16px 48px rgba(0,0,0,0.35);
+    --shadow-inset: inset 0 1px 0 rgba(255,255,255,0.12);
+    --dur-fast: 150ms; --dur-base: 200ms; --dur-slow: 300ms; --dur-breath: 2500ms;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg-1); color: var(--ink);
+    min-height: 100vh; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .aurora {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(124,58,237,0.55), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 20%, rgba(236,72,153,0.4), transparent 60%),
+      radial-gradient(ellipse 60% 60% at 90% 90%, rgba(56,189,248,0.35), transparent 60%),
+      linear-gradient(135deg, #1a0b2e 0%, #2d1155 30%, #5b1769 60%, #831843 90%);
+  }
+  .orb { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; animation: float 18s ease-in-out infinite; }
+  .orb-1 { top: -120px; left: 10%; width: 480px; height: 480px; background: rgba(236,72,153,0.45); }
+  .orb-2 { top: 30%; right: -100px; width: 420px; height: 420px; background: rgba(56,189,248,0.35); animation-delay: -6s; }
+  .orb-3 { bottom: -150px; left: 30%; width: 560px; height: 560px; background: rgba(168,85,247,0.40); animation-delay: -12s; }
+  @keyframes float { 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(40px,-30px) scale(1.1);} }
+
+  .page { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 48px 32px 80px; }
+  .header { margin-bottom: 48px; }
+  .header .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: var(--ink-3); text-transform: uppercase; margin-bottom: 8px; }
+  .header h1 { font-size: 38px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .header h1 span { background: linear-gradient(135deg, #fcd34d, #f472b6, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { color: var(--ink-2); font-size: 14px; max-width: 720px; margin: 0; }
+
+  .section { margin-bottom: 56px; }
+  .section-title { display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--ink-5); }
+  .section-title h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+  .section-title .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-3); }
+  .section-title .hint { margin-left: auto; font-size: 12px; color: var(--ink-3); font-family: 'JetBrains Mono', monospace; }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .row:last-child { margin-bottom: 0; }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+
+  .card {
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-lg);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    box-shadow: var(--shadow-2), var(--shadow-inset);
+    padding: 24px;
+    position: relative; overflow: hidden;
+  }
+  .card-label {
+    font-size: 11px; color: var(--ink-3);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 12px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px;
+    border-radius: var(--r-md);
+    font-size: 13px; font-weight: 500;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-1);
+    color: var(--ink);
+    cursor: pointer; font-family: inherit;
+    backdrop-filter: blur(12px);
+    transition: all var(--dur-fast) ease-out;
+  }
+  .btn:hover { background: var(--glass-2); border-color: var(--glass-border-strong); transform: translateY(-1px); }
+  .btn:active { transform: scale(0.98); transition: transform 100ms ease-out; }
+  .btn.primary {
+    background: linear-gradient(135deg, rgba(167,139,250,0.5), rgba(244,114,182,0.5));
+    border-color: rgba(255,255,255,0.3);
+    box-shadow: 0 4px 16px rgba(167,139,250,0.3), var(--shadow-inset);
+  }
+  .btn.primary:hover { background: linear-gradient(135deg, rgba(167,139,250,0.65), rgba(244,114,182,0.65)); }
+  .btn.success {
+    background: linear-gradient(135deg, rgba(110,231,183,0.4), rgba(103,232,249,0.4));
+    border-color: rgba(110,231,183,0.5);
+    color: #042f1c; font-weight: 600;
+  }
+  .btn.danger {
+    background: rgba(253,164,175,0.15);
+    border-color: rgba(253,164,175,0.4);
+    color: var(--crit);
+  }
+  .btn.ghost { background: transparent; }
+  .btn.sm { padding: 6px 12px; font-size: 12px; }
+  .btn.icon { padding: 8px; width: 36px; height: 36px; justify-content: center; }
+  .btn:disabled, .btn[aria-disabled="true"] {
+    opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3);
+  }
+  .btn:disabled:hover, .btn[aria-disabled="true"]:hover { transform: none; background: var(--glass-1); border-color: var(--glass-border); }
+  .btn.loading { color: transparent; pointer-events: none; position: relative; }
+  .btn.loading::after {
+    content: ''; position: absolute;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 700ms linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PILLS / CHIPS / TAGS */
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 500;
+    padding: 4px 10px;
+    border-radius: var(--r-pill);
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border);
+    color: var(--ink-2);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill.ok { color: var(--ok); background: rgba(110,231,183,0.10); border-color: rgba(110,231,183,0.30); }
+  .pill.ok .dot { box-shadow: 0 0 6px var(--ok-glow); }
+  .pill.warn { color: var(--warn); background: rgba(252,211,77,0.10); border-color: rgba(252,211,77,0.30); }
+  .pill.crit { color: var(--crit); background: rgba(253,164,175,0.12); border-color: rgba(253,164,175,0.35); }
+  .pill.info { color: var(--info); background: rgba(147,197,253,0.10); border-color: rgba(147,197,253,0.30); }
+  @keyframes pulse-breath { 0%,100%{box-shadow:0 0 6px var(--ok-glow);} 50%{box-shadow:0 0 14px var(--ok-glow),0 0 24px rgba(110,231,183,0.18);} }
+  @keyframes pulse-warn { 0%,100%{box-shadow:0 0 6px var(--warn-glow);} 50%{box-shadow:0 0 14px var(--warn-glow);} }
+  .pulse-breath { animation: pulse-breath 2.5s ease-in-out infinite; }
+  .pulse-warn { animation: pulse-warn 1.5s ease-in-out infinite; }
+
+  .chip {
+    padding: 7px 14px;
+    border-radius: var(--r-pill);
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border);
+    color: var(--ink-2);
+    font-size: 12px; cursor: pointer;
+    font-family: inherit;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all var(--dur-fast) ease-out;
+  }
+  .chip:hover { background: var(--glass-2); }
+  .chip.on { background: var(--glass-2); color: var(--ink); border-color: var(--glass-border-strong); box-shadow: var(--shadow-inset); }
+  .chip .count { font-family: 'JetBrains Mono', monospace; font-size: 10px; background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: var(--r-pill); }
+
+  .tag { display:inline-block; font-size:10px; padding:2px 8px; border-radius:var(--r-pill); background:var(--glass-1); border:1px solid var(--glass-border); color:var(--ink-3); font-family:'JetBrains Mono',monospace; }
+
+  /* TOGGLE */
+  .toggle {
+    position: relative;
+    width: 40px; height: 22px;
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background var(--dur-base) ease-out;
+  }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    background: var(--ink-3);
+    border-radius: 50%;
+    transition: all var(--dur-base) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .toggle.on { background: linear-gradient(135deg, var(--ok), var(--cyan)); border-color: transparent; }
+  .toggle.on::after { left: 20px; background: white; box-shadow: 0 0 6px rgba(255,255,255,0.5); }
+  @keyframes led-on { 0%{box-shadow:0 0 0 0 var(--ok-glow);} 100%{box-shadow:0 0 0 8px transparent;} }
+  .toggle.just-on { animation: led-on 600ms ease-out; }
+  .toggle:disabled, .toggle[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+
+  /* SLIDER */
+  .slider { -webkit-appearance:none; appearance:none; width:100%; height:4px; background:var(--glass-1); border-radius:999px; border:1px solid var(--glass-border); outline:none; }
+  .slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:16px; height:16px; background:linear-gradient(135deg,#a78bfa,#f472b6); border-radius:50%; cursor:pointer; box-shadow:0 0 8px rgba(167,139,250,0.5); transition: transform var(--dur-fast) ease-out, box-shadow var(--dur-fast) ease-out; }
+  .slider::-webkit-slider-thumb:hover { transform: scale(1.15); box-shadow: 0 0 12px rgba(167,139,250,0.7); }
+  .slider::-webkit-slider-thumb:active { transform: scale(1.25); }
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .slider-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-2); min-width: 48px; text-align: right; }
+
+  /* FORM */
+  .input {
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: 10px 14px;
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    width: 100%;
+    transition: all var(--dur-base) ease-out;
+  }
+  .input:focus { border-color: var(--accent); background: var(--glass-2); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .input::placeholder { color: var(--ink-4); }
+  .input.error { border-color: var(--crit); box-shadow: 0 0 0 3px var(--crit-glow); }
+  .form-field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 200px; }
+  .form-label { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+  .form-helper { font-size: 11px; color: var(--ink-3); }
+  .form-helper.err { color: var(--crit); }
+
+  /* TABS */
+  .tabs { display:inline-flex; gap:2px; background:var(--glass-1); border:1px solid var(--glass-border); border-radius:var(--r-pill); padding:3px; }
+  .tabs button { background:transparent; border:0; color:var(--ink-3); padding:7px 16px; font-size:12px; font-weight:500; border-radius:var(--r-pill); cursor:pointer; font-family:inherit; transition: color var(--dur-fast) ease-out, background var(--dur-fast) ease-out; }
+  .tabs button:hover { color: var(--ink); }
+  .tabs button.on { background: var(--glass-2); color: var(--ink); box-shadow: var(--shadow-inset); }
+
+  /* CARDS (hover demo) */
+  .hover-card {
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-lg);
+    padding: 20px;
+    backdrop-filter: blur(20px);
+    transition: all var(--dur-base) ease-out;
+    cursor: pointer;
+    min-width: 200px;
+  }
+  .hover-card:hover { background: var(--glass-2); transform: translateY(-2px); box-shadow: var(--shadow-2); }
+  .hover-card:active { transform: scale(0.98); }
+
+  /* TOAST */
+  .toast-host { position: fixed; top: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 9999; pointer-events: none; }
+  .toast {
+    pointer-events: auto;
+    background: var(--glass-2);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: 12px 16px 12px 14px;
+    backdrop-filter: blur(24px);
+    box-shadow: var(--shadow-2), var(--shadow-inset);
+    min-width: 280px; max-width: 360px;
+    font-size: 13px;
+    display: flex; align-items: center; gap: 12px;
+    position: relative; overflow: hidden;
+    animation: toast-in 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .toast::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  }
+  .toast.ok::before { background: var(--ok); }
+  .toast.warn::before { background: var(--warn); }
+  .toast.crit::before { background: var(--crit); }
+  .toast.info::before { background: var(--info); }
+  .toast.exit { animation: toast-out 200ms ease-out forwards; }
+  @keyframes toast-in { from{opacity:0; transform:translateX(40px) scale(0.95);} to{opacity:1; transform:translateX(0) scale(1);} }
+  @keyframes toast-out { from{opacity:1; transform:translateX(0);} to{opacity:0; transform:translateX(40px);} }
+  .toast .ic { width: 18px; height: 18px; flex-shrink: 0; }
+  .toast.ok .ic { color: var(--ok); }
+  .toast.warn .ic { color: var(--warn); }
+  .toast.crit .ic { color: var(--crit); }
+  .toast.info .ic { color: var(--info); }
+  .toast .body b { font-weight: 500; display: block; }
+  .toast .body span { font-size: 11px; color: var(--ink-3); font-family: 'JetBrains Mono', monospace; }
+
+  /* TOOLTIP */
+  .trigger {
+    position: relative; display: inline-block;
+  }
+  .tooltip {
+    position: absolute; bottom: calc(100% + 8px); left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-sm);
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--ink);
+    pointer-events: none;
+    opacity: 0;
+    white-space: nowrap;
+    transition: opacity 150ms ease-out, transform 150ms ease-out;
+  }
+  .tooltip::after {
+    content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 4px solid transparent; border-top-color: rgba(0,0,0,0.7);
+  }
+  .trigger:hover .tooltip, .trigger:focus-visible .tooltip {
+    opacity: 1; transform: translateX(-50%) translateY(0);
+    transition-delay: 100ms;
+  }
+
+  /* MODAL */
+  .modal-host { position: fixed; inset: 0; z-index: 9998; display: none; }
+  .modal-host.open { display: block; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); animation: backdrop-in 200ms ease-out; }
+  .modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); min-width: 480px; max-width: 560px; animation: modal-in 250ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes backdrop-in { from{opacity:0;} to{opacity:1;} }
+  @keyframes modal-in { from{opacity:0; transform: translate(-50%, -50%) scale(0.95);} to{opacity:1; transform: translate(-50%, -50%) scale(1);} }
+  .modal-content .card { padding: 28px; }
+  .modal-content h3 { font-size: 18px; margin: 0 0 8px; }
+  .modal-content p { color: var(--ink-2); font-size: 13px; margin: 0 0 20px; }
+  .modal-content .actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* SKELETON */
+  .skel-line {
+    height: 12px;
+    border-radius: var(--r-sm);
+    background: linear-gradient(90deg, var(--glass-1) 0%, var(--glass-2) 50%, var(--glass-1) 100%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s linear infinite;
+    margin-bottom: 8px;
+  }
+  .skel-line.lg { height: 24px; width: 60%; }
+  .skel-line.md { width: 80%; }
+  .skel-line.sm { width: 40%; }
+  @keyframes skeleton-shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+  /* EMPTY / ERROR */
+  .empty { text-align: center; padding: 40px 20px; }
+  .empty .ic-lg {
+    width: 56px; height: 56px;
+    border-radius: 18px;
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border);
+    display: inline-grid; place-items: center;
+    margin-bottom: 16px;
+    color: var(--ink-3);
+  }
+  .empty h3 { font-size: 15px; margin: 0 0 6px; }
+  .empty p { font-size: 12px; color: var(--ink-3); margin: 0 0 16px; }
+  .error-state .ic-lg { background: rgba(253,164,175,0.10); border-color: rgba(253,164,175,0.30); color: var(--crit); }
+
+  /* RING ANIMATION */
+  .demo-ring {
+    width: 160px; height: 160px; position: relative; margin: 0 auto;
+  }
+  .demo-ring svg { transform: rotate(-90deg); }
+  .demo-ring .track { stroke: rgba(255,255,255,0.08); fill: none; stroke-width: 12; }
+  .demo-ring .fill { fill: none; stroke-width: 12; stroke-linecap: round; }
+  .demo-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .demo-ring-center .v { font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 600; line-height: 1; }
+  .demo-ring-center .l { font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
+
+  /* CHART (animated) */
+  .demo-chart { width: 100%; height: 160px; }
+  .chart-line { fill: none; stroke-width: 2; }
+  .chart-area { fill: url(#demo-grad); }
+  .grid-lines line { stroke: rgba(255,255,255,0.05); }
+
+  /* FOCUS RING */
+  *:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+  }
+
+  /* GRID HELPERS */
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+  .label { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; font-family: 'JetBrains Mono', monospace; margin-bottom: 6px; }
+  .num-display { font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
+  code { font-family: 'JetBrains Mono', monospace; background: rgba(0,0,0,0.25); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: var(--ink-2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+    .orb { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="aurora"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- toast container -->
+<div class="toast-host" id="toastHost"></div>
+
+<!-- modal -->
+<div class="modal-host" id="modalHost">
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+  <div class="modal-content">
+    <div class="card">
+      <h3>Reboot the Pi?</h3>
+      <p>This will stop all envctrl services for ~30 seconds. Active sensor sessions will be interrupted.</p>
+      <div class="actions">
+        <button class="btn ghost" id="modalCancel">Cancel</button>
+        <button class="btn danger" id="modalConfirm">⚠ Reboot now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <div class="header">
+    <div class="eyebrow">envctrl · design system v1.0</div>
+    <h1>Glass Soft <span>· 交互效果 Demo</span></h1>
+    <p>所有 hover / click / state / data 动效的 live 演示。点一下、悬停一下、拖一下，看每个组件的反馈节奏。配套规范：<code>workspace/glass-soft-spec.md</code> + <code>workspace/glass-soft-interactions.md</code></p>
+  </div>
+
+  <!-- ═══════ 1 · BUTTONS ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Buttons</h2>
+      <span class="num">01</span>
+      <span class="hint">hover = bg + lift · active = scale 0.98</span>
+    </div>
+
+    <div class="card">
+      <div class="card-label">5 variants</div>
+      <div class="row">
+        <button class="btn">Default</button>
+        <button class="btn primary">+ Add device</button>
+        <button class="btn success">✓ Activate</button>
+        <button class="btn danger">⚠ Reboot</button>
+        <button class="btn ghost">Cancel</button>
+      </div>
+
+      <div class="card-label" style="margin-top: 20px;">with icons</div>
+      <div class="row">
+        <button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.5 2.6M21 3v6h-6"/></svg>Refresh</button>
+        <button class="btn primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Download</button>
+        <button class="btn icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+      </div>
+
+      <div class="card-label" style="margin-top: 20px;">sizes</div>
+      <div class="row" style="align-items: center;">
+        <button class="btn sm">Small</button>
+        <button class="btn">Default</button>
+        <button class="btn" style="padding: 12px 22px; font-size: 14px;">Large</button>
+      </div>
+
+      <div class="card-label" style="margin-top: 20px;">states</div>
+      <div class="row">
+        <button class="btn" id="btn-loading">Loading… (click me)</button>
+        <button class="btn" disabled>Disabled</button>
+        <button class="btn primary" disabled>Disabled primary</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 2 · STATUS / PULSE ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Status pills &amp; pulse</h2>
+      <span class="num">02</span>
+      <span class="hint">ok = breath · warn = pulse · crit = static</span>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <span class="pill ok"><span class="dot pulse-breath"></span>online</span>
+        <span class="pill warn"><span class="dot pulse-warn"></span>drift</span>
+        <span class="pill crit"><span class="dot"></span>offline</span>
+        <span class="pill info"><span class="dot"></span>control</span>
+        <span class="pill"><span class="dot"></span>disabled</span>
+      </div>
+
+      <div class="card-label" style="margin-top: 24px;">chips · filter toggles</div>
+      <div class="row" id="chipRow">
+        <button class="chip on">All <span class="count">8</span></button>
+        <button class="chip">Online <span class="count">6</span></button>
+        <button class="chip">Warning <span class="count">1</span></button>
+        <button class="chip">Offline <span class="count">1</span></button>
+      </div>
+
+      <div class="card-label" style="margin-top: 24px;">tags</div>
+      <div class="row">
+        <span class="tag">alarm</span>
+        <span class="tag">warn</span>
+        <span class="tag">system</span>
+        <span class="tag">control</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 3 · TOGGLE / SLIDER ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Toggle &amp; Slider</h2>
+      <span class="num">03</span>
+      <span class="hint">toggle: 滑块 200ms spring · slider: hover scale 1.15</span>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">toggle · click to switch</div>
+        <div class="row">
+          <div class="toggle" id="t1"></div>
+          <span style="font-size: 12px; color: var(--ink-2);">Compressor</span>
+        </div>
+        <div class="row" style="margin-top: 16px;">
+          <div class="toggle on" id="t2"></div>
+          <span style="font-size: 12px; color: var(--ink-2);">Fan (currently on)</span>
+        </div>
+        <div class="row" style="margin-top: 16px;">
+          <div class="toggle" aria-disabled="true"></div>
+          <span style="font-size: 12px; color: var(--ink-3);">Disabled (no permission)</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">slider · drag the thumb</div>
+        <div class="slider-row" style="margin-top: 24px;">
+          <span style="font-size: 11px; color: var(--ink-3); font-family: 'JetBrains Mono', monospace; min-width: 20px;">0</span>
+          <input type="range" class="slider" id="slider1" min="0" max="100" value="42"/>
+          <span class="slider-val" id="slider1-val">42%</span>
+        </div>
+        <div class="slider-row" style="margin-top: 24px;">
+          <span style="font-size: 11px; color: var(--ink-3); font-family: 'JetBrains Mono', monospace; min-width: 20px;">16</span>
+          <input type="range" class="slider" id="slider2" min="16" max="30" step="0.5" value="23"/>
+          <span class="slider-val" id="slider2-val">23.0°</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 4 · FORM INPUTS ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Form inputs</h2>
+      <span class="num">04</span>
+      <span class="hint">focus: border accent + 3px glow · error: border crit</span>
+    </div>
+
+    <div class="card">
+      <div class="grid-2">
+        <div class="form-field">
+          <label class="form-label">Name</label>
+          <input class="input" value="Anthropic"/>
+          <div class="form-helper">Display name for this provider</div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Base URL (focused)</label>
+          <input class="input" id="focusedInput" value="https://api.anthropic.com"/>
+          <div class="form-helper">Endpoint for the LLM API</div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">API Key</label>
+          <input class="input" type="password" value="sk-ant-api3-•••••••••" id="pwInput"/>
+          <div class="form-helper">Encrypted at rest with AES-256-GCM</div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Model (error)</label>
+          <input class="input error" value="" placeholder="e.g. claude-haiku-4-5" id="errInput"/>
+          <div class="form-helper err">⚠ Model name is required</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 5 · TABS / RANGE TABS ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Tabs &amp; Range tabs</h2>
+      <span class="num">05</span>
+      <span class="hint">click to switch · active = glass-2 + inset shadow</span>
+    </div>
+
+    <div class="card">
+      <div class="card-label">primary tabs</div>
+      <div class="tabs" id="tabs1">
+        <button class="on" data-tab="live">Live</button>
+        <button data-tab="history">History</button>
+        <button data-tab="control">Control</button>
+        <button data-tab="diag">Diagnostics</button>
+      </div>
+
+      <div class="card-label" style="margin-top: 20px;">range tabs (smaller)</div>
+      <div class="row">
+        <div class="tabs" id="range1" style="font-size: 11px;">
+          <button>5m</button>
+          <button class="on">1h</button>
+          <button>24h</button>
+          <button>7d</button>
+        </div>
+        <div class="tabs" id="range2" style="font-size: 11px;">
+          <button class="on">All</button>
+          <button>Critical</button>
+          <button>Warning</button>
+          <button>Resolved</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 6 · HOVER CARDS ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Card hover</h2>
+      <span class="num">06</span>
+      <span class="hint">hover = translateY(-2px) + shadow grow + bg glass-2</span>
+    </div>
+
+    <div class="grid-3">
+      <div class="hover-card">
+        <div style="font-size: 11px; color: var(--ink-3); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">AC-01 · Living</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 600;">23.0<span style="font-size: 13px; color: var(--ink-3);">°C</span></div>
+        <div style="font-size: 11px; color: var(--ink-3); margin-top: 8px;">Setpoint · last updated 0.4s ago</div>
+      </div>
+      <div class="hover-card">
+        <div style="font-size: 11px; color: var(--ink-3); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">FAN-02 · Bedroom</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 600;">42<span style="font-size: 13px; color: var(--ink-3);">%</span></div>
+        <div style="font-size: 11px; color: var(--ink-3); margin-top: 8px;">Speed · running for 6h 22m</div>
+      </div>
+      <div class="hover-card">
+        <div style="font-size: 11px; color: var(--ink-3); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">PM-Sensor · Roof</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 600; color: var(--warn);">38<span style="font-size: 13px; color: var(--ink-3);"> μg</span></div>
+        <div style="font-size: 11px; color: var(--ink-3); margin-top: 8px;">PM2.5 · climbing +12/h</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 7 · TOAST ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Toast</h2>
+      <span class="num">07</span>
+      <span class="hint">spring in · 3s auto-dismiss · click button to trigger</span>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <button class="btn success" id="toastOk">✓ Show success toast</button>
+        <button class="btn" id="toastWarn" style="background: rgba(252,211,77,0.15); color: var(--warn); border-color: rgba(252,211,77,0.40);">⚠ Show warning</button>
+        <button class="btn danger" id="toastCrit">✗ Show error</button>
+        <button class="btn" id="toastInfo" style="background: rgba(147,197,253,0.15); color: var(--info); border-color: rgba(147,197,253,0.40);">ⓘ Show info</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 8 · TOOLTIP ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Tooltip</h2>
+      <span class="num">08</span>
+      <span class="hint">hover 100ms 后才出现 · 150ms fade + 4px translateY</span>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content: center; padding: 30px 0;">
+        <span class="trigger">
+          <button class="btn primary">Hover me</button>
+          <span class="tooltip">Saves the configuration to /etc/envctrl/config.yaml</span>
+        </span>
+        <span class="trigger">
+          <button class="btn icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></button>
+          <span class="tooltip">More info</span>
+        </span>
+        <span class="trigger">
+          <button class="btn success">Confirm</button>
+          <span class="tooltip">This will rotate the encryption key and restart envctrl</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 9 · MODAL ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Modal</h2>
+      <span class="num">09</span>
+      <span class="hint">backdrop blur fade · content spring scale 0.95→1</span>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <button class="btn danger" id="openModal">⚠ Open dangerous modal</button>
+        <button class="btn primary" id="openModal2">+ Open normal modal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 10 · LOADING / SKELETON ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Loading · skeleton &amp; shimmer</h2>
+      <span class="num">10</span>
+      <span class="hint">骨架 + 1.5s shimmer 循环 · 不要全屏 spinner</span>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">skeleton (device card)</div>
+        <div style="margin-top: 12px;">
+          <div class="skel-line lg"></div>
+          <div class="skel-line md"></div>
+          <div class="skel-line sm"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">inline shimmer (number)</div>
+        <div style="margin-top: 12px; display: flex; gap: 12px; align-items: baseline;">
+          <div class="skel-line" style="width: 80px; height: 32px;"></div>
+          <div class="skel-line" style="width: 40px; height: 14px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 11 · EMPTY / ERROR ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Empty &amp; error states</h2>
+      <span class="num">11</span>
+      <span class="hint">居中 icon + 标题 + 副说明 + 可选 action</span>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="empty">
+          <div class="ic-lg">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 12h20"/></svg>
+          </div>
+          <h3>No backups yet</h3>
+          <p>They appear here after the nightly timer (03:00) runs, or after you click "Create now".</p>
+          <button class="btn primary">+ Create now</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="empty error-state">
+          <div class="ic-lg">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.7 3h16.96a2 2 0 0 0 1.7-3L13.7 3.86a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg>
+          </div>
+          <h3>Couldn't load devices</h3>
+          <p>Connection refused. Check that envctrl is running on port 3000.</p>
+          <button class="btn">↻ Retry</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 12 · DATA ANIMATION ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Data animation</h2>
+      <span class="num">12</span>
+      <span class="hint">数字滚动 500ms · ring 1200ms ease-out · path stroke 800ms</span>
+    </div>
+
+    <div class="grid-3">
+      <div class="card" style="text-align: center;">
+        <div class="card-label">number scroll · click to change</div>
+        <div class="num-display" id="numDemo" style="margin: 16px 0;">23.5</div>
+        <div style="font-size: 11px; color: var(--ink-3); margin-bottom: 16px;">Temperature · °C</div>
+        <button class="btn sm" id="numBump">+ randomize</button>
+      </div>
+
+      <div class="card" style="text-align: center;">
+        <div class="card-label">ring fill · click to change</div>
+        <div class="demo-ring" style="margin: 16px auto;">
+          <svg width="160" height="160" viewBox="0 0 160 160">
+            <circle class="track" cx="80" cy="80" r="68" />
+            <circle class="fill" id="ringFill" cx="80" cy="80" r="68" stroke="url(#demo-grad)" style="stroke-dasharray: 427; stroke-dashoffset: 114;"/>
+          </svg>
+          <div class="demo-ring-center">
+            <div class="v" id="ringNum">73</div>
+            <div class="l">AQI</div>
+          </div>
+        </div>
+        <button class="btn sm" id="ringBump">+ randomize</button>
+        <svg width="0" height="0"><defs><linearGradient id="demo-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6ee7b7"/><stop offset="100%" stop-color="#67e8f9"/></linearGradient></defs></svg>
+      </div>
+
+      <div class="card">
+        <div class="card-label">chart line · stroke animation</div>
+        <svg class="demo-chart" viewBox="0 0 400 160" preserveAspectRatio="none" id="demoChart">
+          <defs>
+            <linearGradient id="demo-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.30"/>
+              <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <g class="grid-lines">
+            <line x1="0" y1="40" x2="400" y2="40"/>
+            <line x1="0" y1="80" x2="400" y2="80"/>
+            <line x1="0" y1="120" x2="400" y2="120"/>
+          </g>
+          <path class="chart-area" id="demoArea" d="M0,100 C50,80 100,90 150,70 C200,55 250,65 300,50 C350,40 380,35 400,30 L400,160 L0,160 Z"/>
+          <path class="chart-line" id="demoLine" d="M0,100 C50,80 100,90 150,70 C200,55 250,65 300,50 C350,40 380,35 400,30" stroke="#a78bfa" style="stroke-dasharray: 500; stroke-dashoffset: 500;"/>
+        </svg>
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+          <button class="btn sm" id="chartReplay">↻ Replay animation</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ 13 · PAGE TRANSITION ═══════ -->
+  <div class="section">
+    <div class="section-title">
+      <h2>Page transition</h2>
+      <span class="num">13</span>
+      <span class="hint">fade + 6px translateY · 300ms ease-out</span>
+    </div>
+
+    <div class="card">
+      <div class="tabs" id="pageTabs">
+        <button class="on" data-page="p1">Page 1</button>
+        <button data-page="p2">Page 2</button>
+        <button data-page="p3">Page 3</button>
+      </div>
+      <div style="margin-top: 20px; min-height: 120px; position: relative;">
+        <div class="page-content active" data-pane="p1">
+          <h3 style="font-size: 18px; margin-bottom: 8px;">Page 1</h3>
+          <p style="color: var(--ink-2); font-size: 13px; margin: 0;">This pane animates in with fade + 6px translateY. Switching tabs triggers the same animation again, with a small delay so the outgoing content finishes.</p>
+        </div>
+        <div class="page-content" data-pane="p2" style="display:none;">
+          <h3 style="font-size: 18px; margin-bottom: 8px;">Page 2</h3>
+          <p style="color: var(--ink-2); font-size: 13px; margin: 0;">Different content for page 2. Notice the smooth fade + slide entrance — never abrupt.</p>
+        </div>
+        <div class="page-content" data-pane="p3" style="display:none;">
+          <h3 style="font-size: 18px; margin-bottom: 8px;">Page 3</h3>
+          <p style="color: var(--ink-2); font-size: 13px; margin: 0;">Page 3 with yet different content. The animation re-fires every time you click a tab.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Toast ──
+  const toastIcons = {
+    ok: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>',
+    warn: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.7 3h16.96a2 2 0 0 0 1.7-3L13.7 3.86a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg>',
+    crit: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+    info: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>',
+  };
+  const toastMsgs = {
+    ok: { b: 'Saved', s: 'envctrl restarted successfully' },
+    warn: { b: 'Drift detected', s: 'DHT-04 — auto-retry in 5s' },
+    crit: { b: 'Connection failed', s: 'modbus timeout on /dev/ttyUSB0' },
+    info: { b: 'Backup completed', s: 'envctrl-20260701T030000Z.db · 1.8 MB' },
+  };
+  function showToast(type, ms = 3000) {
+    const host = document.getElementById('toastHost');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `${toastIcons[type]}<div class="body"><b>${toastMsgs[type].b}</b><span>${toastMsgs[type].s}</span></div>`;
+    host.appendChild(t);
+    setTimeout(() => {
+      t.classList.add('exit');
+      setTimeout(() => t.remove(), 200);
+    }, ms);
+  }
+  document.getElementById('toastOk').onclick = () => showToast('ok');
+  document.getElementById('toastWarn').onclick = () => showToast('warn', 4000);
+  document.getElementById('toastCrit').onclick = () => showToast('crit', 5000);
+  document.getElementById('toastInfo').onclick = () => showToast('info', 2500);
+
+  // ── Loading button ──
+  document.getElementById('btn-loading').onclick = function() {
+    this.classList.add('loading');
+    setTimeout(() => this.classList.remove('loading'), 1800);
+  };
+
+  // ── Toggle with LED flash ──
+  document.getElementById('t1').onclick = function() {
+    this.classList.toggle('on');
+    if (this.classList.contains('on')) {
+      this.classList.add('just-on');
+      setTimeout(() => this.classList.remove('just-on'), 600);
+    }
+  };
+  document.getElementById('t2').onclick = function() {
+    this.classList.toggle('on');
+    if (this.classList.contains('on')) {
+      this.classList.add('just-on');
+      setTimeout(() => this.classList.remove('just-on'), 600);
+    }
+  };
+
+  // ── Sliders ──
+  document.getElementById('slider1').oninput = function() { document.getElementById('slider1-val').textContent = this.value + '%'; };
+  document.getElementById('slider2').oninput = function() { document.getElementById('slider2-val').textContent = parseFloat(this.value).toFixed(1) + '°'; };
+
+  // ── Chip toggle ──
+  document.querySelectorAll('#chipRow .chip').forEach(c => {
+    c.onclick = () => {
+      c.parentElement.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+      c.classList.add('on');
+    };
+  });
+
+  // ── Tabs ──
+  document.querySelectorAll('.tabs').forEach(t => {
+    t.querySelectorAll('button').forEach(b => {
+      b.onclick = () => {
+        t.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+      };
+    });
+  });
+
+  // ── Modal ──
+  const modal = document.getElementById('modalHost');
+  function openModal(content) {
+    if (content === 'danger') {
+      document.getElementById('modalConfirm').style.display = '';
+    } else {
+      document.getElementById('modalConfirm').style.display = 'none';
+    }
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.getElementById('openModal').onclick = () => openModal('danger');
+  document.getElementById('openModal2').onclick = () => openModal('normal');
+  document.getElementById('modalBackdrop').onclick = closeModal;
+  document.getElementById('modalCancel').onclick = closeModal;
+  document.getElementById('modalConfirm').onclick = () => { closeModal(); showToast('crit', 3000); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+  // ── Number scroll ──
+  function animateNumber(el, from, to, duration = 500) {
+    const start = performance.now();
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const val = from + (to - from) * eased;
+      el.textContent = val.toFixed(1);
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  document.getElementById('numBump').onclick = () => {
+    const el = document.getElementById('numDemo');
+    const from = parseFloat(el.textContent);
+    const to = +(20 + Math.random() * 8).toFixed(1);
+    animateNumber(el, from, to);
+  };
+
+  // ── Ring ──
+  const RING_LEN = 427; // 2 * pi * 68
+  document.getElementById('ringBump').onclick = () => {
+    const fill = document.getElementById('ringFill');
+    const num = document.getElementById('ringNum');
+    const from = parseFloat(num.textContent);
+    const to = Math.round(30 + Math.random() * 70);
+    const fromOffset = RING_LEN * (1 - from / 100);
+    const toOffset = RING_LEN * (1 - to / 100);
+    fill.style.transition = 'stroke-dashoffset 1200ms cubic-bezier(0.4, 0, 0.2, 1)';
+    fill.setAttribute('stroke-dashoffset', fromOffset);
+    requestAnimationFrame(() => fill.setAttribute('stroke-dashoffset', toOffset));
+    animateNumber(num, from, to, 1200);
+  };
+
+  // ── Chart replay ──
+  function replayChart() {
+    const line = document.getElementById('demoLine');
+    const area = document.getElementById('demoArea');
+    const len = line.getTotalLength();
+    line.style.transition = 'none';
+    line.style.strokeDasharray = len;
+    line.style.strokeDashoffset = len;
+    area.style.opacity = 0;
+    requestAnimationFrame(() => {
+      line.style.transition = 'stroke-dashoffset 800ms cubic-bezier(0.4, 0, 0.2, 1)';
+      line.style.strokeDashoffset = 0;
+      area.style.transition = 'opacity 300ms ease-out';
+      area.style.opacity = 1;
+    });
+  }
+  document.getElementById('chartReplay').onclick = replayChart;
+  // initial chart animation
+  setTimeout(replayChart, 200);
+
+  // ── Page transition tabs ──
+  document.querySelectorAll('#pageTabs button').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('#pageTabs button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      const target = b.dataset.page;
+      document.querySelectorAll('.page-content').forEach(p => {
+        p.style.display = 'none';
+        p.classList.remove('active');
+        p.style.animation = 'none';
+      });
+      const pane = document.querySelector(`.page-content[data-pane="${target}"]`);
+      pane.style.display = 'block';
+      // force reflow then re-animate
+      void pane.offsetWidth;
+      pane.style.animation = 'page-in 300ms ease-out';
+    };
+  });
+
+  // Add page-in keyframes dynamically
+  const style = document.createElement('style');
+  style.textContent = `@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`;
+  document.head.appendChild(style);
+</script>
+
+</body>
+</html>

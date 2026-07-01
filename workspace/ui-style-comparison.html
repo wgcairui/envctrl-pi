@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>envctrl · UI 风格对比</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f5f0;
+    --ink: #1a1a1a;
+    --ink-soft: #6b6b66;
+    --line: #e2dfd6;
+    --paper: #ffffff;
+    --accent: #2f6f5e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  .page {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 56px 40px 80px;
+  }
+  .head {
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 32px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 36px;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 12px;
+  }
+  .head p {
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 720px;
+    margin: 0;
+  }
+  .legend {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .legend i.b { background: #c97b3f; }
+  .legend i.c { background: #8b5cf6; }
+  .legend i.d { background: #b06367; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card-head {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .card-head .id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.08em;
+  }
+  .card-head h2 {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    margin: 4px 0 6px;
+  }
+  .card-head .desc {
+    font-size: 13px;
+    color: var(--ink-soft);
+    max-width: 380px;
+  }
+  .tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    background: #f0ede4;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    height: fit-content;
+  }
+  .a .tag { background: rgba(47,111,94,0.12); color: var(--accent); }
+  .b .tag { background: rgba(15,23,42,0.08); color: #0f172a; }
+  .c .tag { background: rgba(139,92,246,0.12); color: #6d28d9; }
+  .d .tag { background: rgba(176,99,103,0.12); color: var(--ink); }
+
+  .stage {
+    padding: 20px;
+    background: linear-gradient(180deg, #fafaf5 0%, #f5f5f0 100%);
+    flex: 1;
+  }
+
+  /* ============== A. Industrial Dark ============== */
+  .a-frame {
+    background: #0a0e1a;
+    border-radius: 10px;
+    padding: 14px;
+    color: #d4dae3;
+    font-family: 'JetBrains Mono', 'Outfit', monospace;
+    font-size: 11px;
+    border: 1px solid #1a2238;
+    box-shadow: 0 12px 30px -10px rgba(0,0,0,0.25);
+  }
+  .a-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 6px 12px;
+    border-bottom: 1px solid #1a2238;
+    margin-bottom: 12px;
+  }
+  .a-logo {
+    display: flex; align-items: center; gap: 8px;
+    color: #6fff8e; font-weight: 600; letter-spacing: 0.1em; font-size: 11px;
+  }
+  .a-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #6fff8e;
+    box-shadow: 0 0 8px #6fff8e;
+  }
+  .a-clock { color: #6b7589; font-size: 10px; }
+  .a-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .a-cell {
+    background: #0f1426;
+    border: 1px solid #1a2238;
+    border-radius: 6px;
+    padding: 8px 9px;
+    position: relative;
+  }
+  .a-cell .lbl { color: #6b7589; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .a-cell .val { color: #e8edf5; font-size: 19px; font-weight: 600; margin-top: 2px; }
+  .a-cell .unit { color: #6b7589; font-size: 10px; margin-left: 1px; }
+  .a-cell .spark { position: absolute; right: 8px; top: 8px; opacity: 0.6; }
+  .a-cell.warm .val { color: #ffb547; }
+  .a-cell.crit .val { color: #ff6b6b; }
+  .a-row {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 8px;
+  }
+  .a-panel {
+    background: #0f1426;
+    border: 1px solid #1a2238;
+    border-radius: 6px;
+    padding: 9px 10px;
+  }
+  .a-panel h4 {
+    margin: 0 0 6px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7589; font-weight: 500;
+  }
+  .a-row-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 0; font-size: 10px;
+    border-top: 1px dashed #1a2238;
+  }
+  .a-row-item:first-of-type { border-top: 0; }
+  .a-row-item .n { color: #e8edf5; }
+  .a-row-item .s { font-size: 9px; }
+  .a-row-item .s.ok { color: #6fff8e; }
+  .a-row-item .s.warn { color: #ffb547; }
+  .a-row-item .s.off { color: #6b7589; }
+  .a-alarm { color: #ff6b6b; font-size: 9px; }
+  .a-alarm .t { color: #6b7589; }
+
+  /* ============== B. Minimalist Light ============== */
+  .b-frame {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 14px;
+    color: #0f172a;
+    font-family: 'Outfit', sans-serif;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 12px 30px -10px rgba(15,23,42,0.08);
+  }
+  .b-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 6px 14px;
+  }
+  .b-logo {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 600; font-size: 13px;
+  }
+  .b-logo .sq {
+    width: 16px; height: 16px; border-radius: 5px;
+    background: linear-gradient(135deg, #0f172a, #475569);
+    display: grid; place-items: center;
+  }
+  .b-logo .sq::after { content: ""; width: 6px; height: 6px; background: #10b981; border-radius: 50%; }
+  .b-tabs { display: flex; gap: 14px; font-size: 11px; color: #94a3b8; }
+  .b-tabs span.act { color: #0f172a; font-weight: 500; }
+  .b-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .b-cell {
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    padding: 10px 11px;
+  }
+  .b-cell .lbl { font-size: 11px; color: #94a3b8; }
+  .b-cell .val { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; margin-top: 4px; color: #0f172a; }
+  .b-cell .unit { font-size: 11px; color: #94a3b8; font-weight: 400; margin-left: 2px; }
+  .b-cell .delta { font-size: 10px; color: #10b981; margin-top: 2px; }
+  .b-cell .delta.dn { color: #f43f5e; }
+  .b-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .b-panel {
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .b-panel h4 { margin: 0 0 8px; font-size: 11px; font-weight: 500; color: #0f172a; }
+  .b-dev {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 0; font-size: 11px;
+  }
+  .b-dev .n { color: #0f172a; }
+  .b-dev .m { color: #94a3b8; font-size: 10px; }
+  .b-pill {
+    font-size: 9px; padding: 2px 6px; border-radius: 999px;
+    background: #ecfdf5; color: #047857; font-weight: 500;
+  }
+  .b-pill.warn { background: #fffbeb; color: #b45309; }
+  .b-pill.off  { background: #f1f5f9; color: #64748b; }
+  .b-alarm { font-size: 10px; padding: 4px 0; color: #475569; }
+  .b-alarm .t { color: #94a3b8; font-size: 9px; }
+
+  /* ============== C. Glassmorphism ============== */
+  .c-frame {
+    background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #831843 100%);
+    border-radius: 12px;
+    padding: 18px;
+    color: white;
+    font-family: 'Outfit', sans-serif;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 18px 40px -15px rgba(76,29,149,0.5);
+  }
+  .c-frame::before, .c-frame::after {
+    content: ""; position: absolute; border-radius: 50%;
+    filter: blur(40px); pointer-events: none;
+  }
+  .c-frame::before {
+    width: 140px; height: 140px; top: -50px; right: -30px;
+    background: rgba(236, 72, 153, 0.5);
+  }
+  .c-frame::after {
+    width: 180px; height: 180px; bottom: -60px; left: -40px;
+    background: rgba(56, 189, 248, 0.4);
+  }
+  .c-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2px 14px;
+    position: relative; z-index: 1;
+  }
+  .c-logo { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 13px; }
+  .c-logo .ic {
+    width: 22px; height: 22px; border-radius: 7px;
+    background: linear-gradient(135deg, #fbbf24, #f472b6);
+    display: grid; place-items: center;
+    box-shadow: 0 4px 12px rgba(251,191,36,0.4);
+  }
+  .c-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    margin-bottom: 12px; position: relative; z-index: 1;
+  }
+  .c-cell {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 10px 11px;
+  }
+  .c-cell .lbl { font-size: 10px; color: rgba(255,255,255,0.7); }
+  .c-cell .val { font-size: 20px; font-weight: 500; margin-top: 2px; letter-spacing: -0.01em; }
+  .c-cell .unit { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 400; }
+  .c-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; position: relative; z-index: 1; }
+  .c-panel {
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .c-panel h4 { margin: 0 0 6px; font-size: 11px; font-weight: 500; }
+  .c-dev { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; font-size: 10px; }
+  .c-dev .n { color: white; }
+  .c-pill {
+    font-size: 9px; padding: 2px 7px; border-radius: 999px;
+    background: rgba(52, 211, 153, 0.25); color: #6ee7b7; font-weight: 500;
+    border: 1px solid rgba(52, 211, 153, 0.3);
+  }
+  .c-pill.warn { background: rgba(251, 191, 36, 0.2); color: #fcd34d; border-color: rgba(251,191,36,0.3); }
+
+  /* ============== D. Editorial Brutal ============== */
+  .d-frame {
+    background: #f0ebe0;
+    border-radius: 0;
+    padding: 16px;
+    color: #1a1a1a;
+    font-family: 'Outfit', sans-serif;
+    border: 1.5px solid #1a1a1a;
+    position: relative;
+  }
+  .d-frame::after {
+    content: "envctrl / overview";
+    position: absolute; top: 8px; right: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.1em; color: #1a1a1a;
+  }
+  .d-head {
+    border-bottom: 2px solid #1a1a1a;
+    padding-bottom: 10px; margin-bottom: 12px;
+  }
+  .d-head h3 {
+    font-size: 28px; font-weight: 700; letter-spacing: -0.03em;
+    margin: 0; line-height: 0.95;
+  }
+  .d-head .sub {
+    font-size: 10px; color: #1a1a1a; opacity: 0.6;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px;
+  }
+  .d-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    border-top: 1.5px solid #1a1a1a;
+    border-left: 1.5px solid #1a1a1a;
+  }
+  .d-cell {
+    border-right: 1.5px solid #1a1a1a;
+    border-bottom: 1.5px solid #1a1a1a;
+    padding: 8px 10px;
+  }
+  .d-cell .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: #1a1a1a; opacity: 0.6;
+  }
+  .d-cell .val {
+    font-size: 24px; font-weight: 700; letter-spacing: -0.025em;
+    line-height: 1; margin-top: 4px;
+  }
+  .d-cell .unit { font-size: 10px; font-weight: 400; opacity: 0.6; margin-left: 2px; }
+  .d-cell.hi .val { color: #b06367; }
+  .d-row {
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 0;
+    border: 1.5px solid #1a1a1a; margin-top: 10px;
+  }
+  .d-panel { padding: 9px 11px; }
+  .d-panel + .d-panel { border-left: 1.5px solid #1a1a1a; }
+  .d-panel h4 {
+    margin: 0 0 6px; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .d-row2 {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 0; font-size: 11px;
+    border-top: 1px dashed #1a1a1a;
+  }
+  .d-row2:first-of-type { border-top: 0; }
+  .d-row2 .s { font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+  .d-row2 .s.ok { color: #2f6f5e; }
+  .d-row2 .s.warn { color: #c97b3f; }
+
+  /* common chart svg */
+  svg.chart { display: block; width: 100%; height: auto; }
+
+  /* footer */
+  .foot {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .foot code {
+    font-family: 'JetBrains Mono', monospace;
+    background: #ece8dc;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--ink);
+  }
+
+  @media (max-width: 980px) {
+    .grid { grid-template-columns: 1fr; }
+    .page { padding: 32px 20px 60px; }
+    h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="head">
+    <div class="eyebrow">envctrl · UI redesign</div>
+    <h1>四套 UI 风格对比</h1>
+    <p>同一个 Overview 场景（4 个传感器指标 + 24h 趋势图 + 设备状态 + 告警），分别用 4 种风格实现。挑一个作为重设计方向，或告诉我「A + C 折中」这种组合。</p>
+    <div class="legend">
+      <span><i></i> A · Industrial Dark · 24/7 监控</span>
+      <span><i class="b"></i> B · Minimalist Light · 日常管理</span>
+      <span><i class="c"></i> C · Glassmorphism · 智能家居感</span>
+      <span><i class="d"></i> D · Editorial Brutal · 视觉冲击</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ============ A ============ -->
+    <article class="card a">
+      <div class="card-head">
+        <div>
+          <div class="id">STYLE · A</div>
+          <h2>Industrial Dark</h2>
+          <div class="desc">深色高密度 · 霓虹绿/琥珀告警 · 等宽数字 · 网格化布局。适合 24/7 监控屏、Pi 自带屏、夜间值守、工业场景。</div>
+        </div>
+        <span class="tag">DEEP DIVE</span>
+      </div>
+      <div class="stage">
+        <div class="a-frame">
+          <div class="a-top">
+            <div class="a-logo"><span class="a-dot"></span> ENVCTRL · 01</div>
+            <div class="a-clock">2026-07-01 06:55:30 · uptime 47d</div>
+          </div>
+
+          <div class="a-grid">
+            <div class="a-cell">
+              <div class="lbl">TEMP</div>
+              <div class="val">23.5<span class="unit">°C</span></div>
+              <svg class="spark" width="36" height="14" viewBox="0 0 36 14"><polyline fill="none" stroke="#6fff8e" stroke-width="1" points="0,9 6,8 12,7 18,5 24,6 30,4 36,5"/></svg>
+            </div>
+            <div class="a-cell warm">
+              <div class="lbl">HUMID</div>
+              <div class="val">68.2<span class="unit">%</span></div>
+              <svg class="spark" width="36" height="14" viewBox="0 0 36 14"><polyline fill="none" stroke="#ffb547" stroke-width="1" points="0,4 6,5 12,6 18,5 24,7 30,6 36,8"/></svg>
+            </div>
+            <div class="a-cell">
+              <div class="lbl">CO2</div>
+              <div class="val">724<span class="unit">ppm</span></div>
+              <svg class="spark" width="36" height="14" viewBox="0 0 36 14"><polyline fill="none" stroke="#6fff8e" stroke-width="1" points="0,8 6,7 12,6 18,7 24,5 30,6 36,5"/></svg>
+            </div>
+            <div class="a-cell crit">
+              <div class="lbl">PM2.5</div>
+              <div class="val">38<span class="unit">μg</span></div>
+              <svg class="spark" width="36" height="14" viewBox="0 0 36 14"><polyline fill="none" stroke="#ff6b6b" stroke-width="1" points="0,10 6,9 12,7 18,5 24,4 30,3 36,2"/></svg>
+            </div>
+          </div>
+
+          <div class="a-row">
+            <div class="a-panel">
+              <h4>▎ devices · 6/8 online</h4>
+              <div class="a-row-item"><span class="n">AC-01</span><span class="s ok">● ONLINE</span></div>
+              <div class="a-row-item"><span class="n">FAN-02</span><span class="s ok">● ONLINE</span></div>
+              <div class="a-row-item"><span class="n">DHT-04</span><span class="s warn">● WARN</span></div>
+              <div class="a-row-item"><span class="n">PM-Sensor</span><span class="s off">○ OFFLINE</span></div>
+            </div>
+            <div class="a-panel">
+              <h4>▎ alarms · 2 active</h4>
+              <div class="a-alarm">[06:42] <span class="t">PM2.5</span> threshold breach · 38>25</div>
+              <div class="a-alarm">[05:18] <span class="t">DHT-04</span> response timeout</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ B ============ -->
+    <article class="card b">
+      <div class="card-head">
+        <div>
+          <div class="id">STYLE · B</div>
+          <h2>Minimalist Light</h2>
+          <div class="desc">白底浅边框 · 中性灰文字 · 大量留白 · subtle 阴影 · 1px 描边。适合日常管理、多人协作、家用场景、非工程用户。</div>
+        </div>
+        <span class="tag">EVERYDAY</span>
+      </div>
+      <div class="stage">
+        <div class="b-frame">
+          <div class="b-top">
+            <div class="b-logo"><span class="sq"></span> envctrl</div>
+            <div class="b-tabs">
+              <span class="act">Overview</span>
+              <span>Devices</span>
+              <span>Alarms</span>
+              <span>Config</span>
+            </div>
+          </div>
+
+          <div class="b-grid">
+            <div class="b-cell">
+              <div class="lbl">Temperature</div>
+              <div class="val">23.5<span class="unit">°C</span></div>
+              <div class="delta">+0.3 vs 1h</div>
+            </div>
+            <div class="b-cell">
+              <div class="lbl">Humidity</div>
+              <div class="val">68.2<span class="unit">%</span></div>
+              <div class="delta dn">-1.1 vs 1h</div>
+            </div>
+            <div class="b-cell">
+              <div class="lbl">CO₂</div>
+              <div class="val">724<span class="unit">ppm</span></div>
+              <div class="delta">stable</div>
+            </div>
+            <div class="b-cell">
+              <div class="lbl">PM2.5</div>
+              <div class="val">38<span class="unit">μg/m³</span></div>
+              <div class="delta dn">+12 vs 1h</div>
+            </div>
+          </div>
+
+          <div class="b-row">
+            <div class="b-panel">
+              <h4>Devices</h4>
+              <div class="b-dev"><span class="n">AC-01</span><span class="b-pill">Online</span></div>
+              <div class="b-dev"><span class="n">FAN-02</span><span class="b-pill">Online</span></div>
+              <div class="b-dev"><span class="n">DHT-04</span><span class="b-pill warn">Warning</span></div>
+              <div class="b-dev"><span class="n">PM-Sensor</span><span class="b-pill off">Offline</span></div>
+            </div>
+            <div class="b-panel">
+              <h4>Recent alarms</h4>
+              <div class="b-alarm">06:42 · PM2.5 threshold breach</div>
+              <div class="b-alarm">05:18 · DHT-04 response timeout</div>
+              <div class="b-alarm">02:07 · Backup completed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ C ============ -->
+    <article class="card c">
+      <div class="card-head">
+        <div>
+          <div class="id">STYLE · C</div>
+          <h2>Glassmorphism Soft</h2>
+          <div class="desc">彩色渐变背景 + 毛玻璃卡片 + 圆润柔和。智能家居感强，适合面向家庭用户、强调视觉吸引、第一印象产品。</div>
+        </div>
+        <span class="tag">CONSUMER</span>
+      </div>
+      <div class="stage">
+        <div class="c-frame">
+          <div class="c-top">
+            <div class="c-logo">
+              <div class="ic">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/><circle cx="12" cy="12" r="4"/></svg>
+              </div>
+              envctrl · Home
+            </div>
+            <div class="b-tabs" style="color: rgba(255,255,255,0.7)">
+              <span style="color:white;font-weight:500">Home</span>
+              <span>Devices</span>
+            </div>
+          </div>
+
+          <div class="c-grid">
+            <div class="c-cell">
+              <div class="lbl">Temperature</div>
+              <div class="val">23.5<span class="unit">°C</span></div>
+            </div>
+            <div class="c-cell">
+              <div class="lbl">Humidity</div>
+              <div class="val">68<span class="unit">%</span></div>
+            </div>
+            <div class="c-cell">
+              <div class="lbl">Air quality</div>
+              <div class="val">Good</div>
+            </div>
+            <div class="c-cell" style="background: rgba(251,191,36,0.15); border-color: rgba(251,191,36,0.3)">
+              <div class="lbl" style="color:#fcd34d">⚠ PM2.5</div>
+              <div class="val">38</div>
+            </div>
+          </div>
+
+          <div class="c-row">
+            <div class="c-panel">
+              <h4>Active devices</h4>
+              <div class="c-dev"><span class="n">Living room AC</span><span class="c-pill">On</span></div>
+              <div class="c-dev"><span class="n">Bedroom fan</span><span class="c-pill">On</span></div>
+              <div class="c-dev"><span class="n">Kitchen sensor</span><span class="c-pill warn">Warn</span></div>
+            </div>
+            <div class="c-panel">
+              <h4>Notifications</h4>
+              <div style="font-size:10px;padding:4px 0;opacity:0.9">PM2.5 rising fast — open window?</div>
+              <div style="font-size:10px;padding:4px 0;opacity:0.7">DHT-04 hasn't reported in 12 min</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ D ============ -->
+    <article class="card d">
+      <div class="card-head">
+        <div>
+          <div class="id">STYLE · D</div>
+          <h2>Editorial Brutal</h2>
+          <div class="desc">米白底 + 巨号粗体 + 网格线框 + 单色强调（深红/深绿）。设计师向，视觉冲击强，适合 demo / 强调数据本身 / 内部 review。</div>
+        </div>
+        <span class="tag">STATEMENT</span>
+      </div>
+      <div class="stage">
+        <div class="d-frame">
+          <div class="d-head">
+            <h3>OVERVIEW<br/>07·01·26</h3>
+            <div class="sub">live · 6 devices · 2 alerts</div>
+          </div>
+
+          <div class="d-grid">
+            <div class="d-cell">
+              <div class="lbl">Temp</div>
+              <div class="val">23.5<span class="unit">°</span></div>
+            </div>
+            <div class="d-cell">
+              <div class="lbl">Humid</div>
+              <div class="val">68<span class="unit">%</span></div>
+            </div>
+            <div class="d-cell">
+              <div class="lbl">CO₂</div>
+              <div class="val">724</div>
+            </div>
+            <div class="d-cell hi">
+              <div class="lbl">PM2.5</div>
+              <div class="val">38</div>
+            </div>
+          </div>
+
+          <div class="d-row">
+            <div class="d-panel">
+              <h4>Devices</h4>
+              <div class="d-row2"><span>AC-01 · living</span><span class="s ok">ONLINE</span></div>
+              <div class="d-row2"><span>FAN-02 · bedroom</span><span class="s ok">ONLINE</span></div>
+              <div class="d-row2"><span>DHT-04 · kitchen</span><span class="s warn">WARN</span></div>
+              <div class="d-row2"><span>PM-Sensor · roof</span><span class="s ok">ONLINE</span></div>
+            </div>
+            <div class="d-panel">
+              <h4>Alarms</h4>
+              <div class="d-row2"><span>06:42 · PM2.5&gt;25</span><span class="s warn">HIGH</span></div>
+              <div class="d-row2"><span>05:18 · DHT-04 timeout</span><span class="s warn">WARN</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+
+  <footer class="foot">
+    <div>需要我深入哪个方向？告诉我「A 细化」「B 的暗色版」「C 简化」或者「混搭」都可以。</div>
+    <div>envctrl · Overview mockup · <code>workspace/ui-style-comparison.html</code></div>
+  </footer>
+
+</div>
+</body>
+</html>
